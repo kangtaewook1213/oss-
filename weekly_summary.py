@@ -16,6 +16,8 @@ def show_detail_page(parent, summary):
     pass
 
 def weekly_report_button(parent):
-    """주간 리포트 버튼을 만들고 클릭 시 동작을 연결한다."""
+    """주간 리포트 버튼을 만들고 클릭 시 동작을 연결한다.
+    입력: 버튼을 올릴 부모 프레임
+    """
     # TODO: 구현 예정
     pass
