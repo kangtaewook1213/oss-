@@ -7,3 +7,10 @@ def make_weekly_summary(records):
     """
     # TODO: 구현 예정
     pass
+
+def show_detail_page(summary):
+    """상세 페이지 화면을 구현한다.
+    입력: 주간 요약 결과
+    """
+    # TODO: 구현 예정
+    pass
