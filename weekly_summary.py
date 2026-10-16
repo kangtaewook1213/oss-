@@ -14,3 +14,8 @@ def show_detail_page(summary):
     """
     # TODO: 구현 예정
     pass
+
+def weekly_report_button():
+    """주간 리포트 버튼을 만들고 클릭 시 동작을 연결한다."""
+    # TODO: 구현 예정
+    pass
