@@ -8,9 +8,9 @@ def weekly_summary(records):
     # TODO: 구현 예정
     pass
 
-def show_detail_page(parent,summary):
+def show_detail_page(parent, summary):
     """상세 페이지 화면을 구현한다.
-    입력: 주간 요약 결과
+    입력: 부모 창, 주간 요약 결과
     """
     # TODO: 구현 예정
     pass
