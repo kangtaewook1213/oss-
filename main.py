@@ -7,7 +7,7 @@ class MainApplication(tk.Tk):
         super().__init__()
 
         self.title("종합 기록 시스템 (메인 캘린더)")
-        self.geometry("600x650")
+        self.geometry("1000x650")
         self.resizable(False, False)
 
         # [공통 상태 관리] 선택된 날짜 (YYYY-MM-DD 형식)
