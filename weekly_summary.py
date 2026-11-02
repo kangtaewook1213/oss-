@@ -102,7 +102,7 @@ def weekly_summary(calorie_records, todo_records, ref_date):
         d_burn = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "burn")
         daily.append({"date": d, "intake": d_in, "burn": d_burn, "net": d_in - d_burn})
 
-    week_todo = [t for t in todo_records if start <= t["date"] < end]
+    week_todo = [t for t in todo_records if start <= t["date"] <= end]
     done = sum(1 for t in week_todo if t["done"])
     total = len(week_todo)
 
