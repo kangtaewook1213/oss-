@@ -1,209 +1,131 @@
-"""주간 리포트: 집계(weekly_summary) + Tkinter 화면(show_weekly_report).
+"""메인 화면: 달력 + 날짜 상세 페이지(기능 4개 진입점).
 
-main.py 연결:
-    from weekly_summary import show_weekly_report
-    show_weekly_report(parent, selected_date)   # selected_date: date 또는 'YYYY-MM-DD'
+실행: python main.py
+- 달력의 날짜를 누르면 상세 페이지가 열린다.
+- 상세 페이지에는 칼로리 / 할 일 / 인바디 / 주간 리포트 버튼이 있다.
+- 각 기능은 담당자가 만든 함수로 아래 open_* 함수 안에서 연결한다.
+- selected_date는 datetime.date 객체로 전달한다. (문자열이 필요하면 .isoformat())
 """
-import csv
-import os
+import calendar
 import tkinter as tk
-from datetime import date, datetime, timedelta
-from tkinter import ttk
+from datetime import date
+from tkinter import messagebox
 
-from config import CALORIE_CSV, TODO_CSV
+from config import ensure_data_files
+from calorie_diary import show_calorie_page
+from body_tracker import show_body_tracker
+from weekly_summary import show_weekly_report
 
-# 한 주의 시작 요일: "MON" = 월~일, "SUN" = 일~토
-WEEK_START = "SUN"
-
-WEEKDAY_KR = ["월", "화", "수", "목", "금", "토", "일"]  # date.weekday() 순서
-TRUE_VALUES = ("1", "true", "y", "yes", "완료")
-
-
-# ---------------------------------------------------------------
-# 날짜 / 주 범위
-# ---------------------------------------------------------------
-def to_date(value):
-    """'YYYY-MM-DD' 문자열 또는 date를 date로 변환"""
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
-
-
-def get_week_range(ref_date):
-    """ref_date가 속한 주의 (시작일, 종료일) 반환. 기준은 WEEK_START."""
-    ref_date = to_date(ref_date)
-    if WEEK_START == "SUN":
-        offset = (ref_date.weekday() + 1) % 7   # 일요일=0 ... 토요일=6
-    else:
-        offset = ref_date.weekday()             # 월요일=0 ... 일요일=6
-    start = ref_date - timedelta(days=offset)
-    return start, start + timedelta(days=6)
+WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"]  # 일요일 시작 (주간 리포트 기준과 동일)
 
 
 # ---------------------------------------------------------------
-# CSV 읽기 (파일이 없으면 빈 리스트)
+# 기능 연결부: 담당자가 자기 함수를 만들면 여기만 고치면 된다.
 # ---------------------------------------------------------------
-def load_calorie_records(path=CALORIE_CSV):
-    if not os.path.exists(path):
-        return []
-    records = []
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        for row in csv.DictReader(f):
-            try:
-                records.append({
-                    "date": to_date(row["date"]),
-                    "type": row["type"].strip().lower(),
-                    "name": row["name"],
-                    "kcal": int(float(row["kcal"])),
-                })
-            except (ValueError, KeyError, TypeError, AttributeError):
-                print(f"[건너뜀] 칼로리 행 오류: {row}")
-    return records
+def open_calorie(parent, selected_date):
+    show_calorie_page(parent, selected_date)
 
 
-def load_todo_records(path=TODO_CSV):
-    if not os.path.exists(path):
-        return []
-    records = []
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        for row in csv.DictReader(f):
-            try:
-                records.append({
-                    "date": to_date(row["date"]),
-                    "title": row["title"],
-                    "done": row["done"].strip().lower() in TRUE_VALUES,
-                })
-            except (ValueError, KeyError, TypeError, AttributeError):
-                print(f"[건너뜀] 할 일 행 오류: {row}")
-    return records
+def open_todo(parent, selected_date):
+    # TODO: 할 일 입력/저장 담당 코드 연결
+    messagebox.showinfo("할 일", f"{selected_date} 할 일 입력 (구현 예정)", parent=parent)
+
+
+def open_inbody(parent, selected_date):
+    show_body_tracker(parent, selected_date)
+
+
+def open_weekly_report(parent, selected_date):
+    show_weekly_report(parent, selected_date)
 
 
 # ---------------------------------------------------------------
-# 집계
+# 상세 페이지
 # ---------------------------------------------------------------
-def weekly_summary(calorie_records, todo_records, ref_date):
-    """주간 리포트 요약을 만든다.
+def show_detail_page(root, selected_date):
+    win = tk.Toplevel(root)
+    win.title(f"{selected_date.isoformat()} 상세")
+    win.geometry("320x300")
 
-    입력: 칼로리 기록, 할 일 기록(None이면 빈 리스트로 처리), 기준 날짜
-    출력: {
-        "start", "end", "has_data",
-        "calorie": {"intake", "burn", "net", "records"},
-        "daily":   [{"date", "intake", "burn", "net"} x 7],
-        "todo":    {"total", "done", "rate", "items", "incomplete"},
-    }
-    """
-    calorie_records = calorie_records or []
-    todo_records = todo_records or []
-    start, end = get_week_range(ref_date)
+    tk.Label(win, text=selected_date.strftime("%Y년 %m월 %d일"),
+             font=("맑은 고딕", 14, "bold")).pack(pady=15)
 
-    week_cal = [r for r in calorie_records if start <= r["date"] <= end]
-    intake = sum(r["kcal"] for r in week_cal if r["type"] == "intake")
-    burn = sum(r["kcal"] for r in week_cal if r["type"] == "burn")
-
-    daily = []
-    for i in range(7):
-        d = start + timedelta(days=i)
-        d_in = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "intake")
-        d_burn = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "burn")
-        daily.append({"date": d, "intake": d_in, "burn": d_burn, "net": d_in - d_burn})
-
-    week_todo = [t for t in todo_records if start <= t["date"] <= end]
-    done = sum(1 for t in week_todo if t["done"])
-    total = len(week_todo)
-
-    return {
-        "start": start,
-        "end": end,
-        "has_data": bool(week_cal or week_todo),
-        "calorie": {"intake": intake, "burn": burn,
-                    "net": intake - burn, "records": week_cal},
-        "daily": daily,
-        "todo": {
-            "total": total,
-            "done": done,
-            "rate": round(done / total * 100) if total else 0,
-            "items": week_todo,
-            "incomplete": [t for t in week_todo if not t["done"]],
-        },
-    }
+    buttons = [
+        ("칼로리 입력", open_calorie),
+        ("할 일 입력", open_todo),
+        ("인바디 트래커", open_inbody),
+        ("주간 리포트", open_weekly_report),
+    ]
+    for text, handler in buttons:
+        tk.Button(win, text=text, width=22, height=2,
+                  command=lambda h=handler: h(win, selected_date)).pack(pady=4)
 
 
 # ---------------------------------------------------------------
-# 화면
+# 달력
 # ---------------------------------------------------------------
-def show_weekly_report(parent, selected_date):
-    """선택한 날짜가 속한 주의 리포트 창을 연다. 닫으면 parent(상세 화면)로 돌아간다."""
-    summary = weekly_summary(load_calorie_records(), load_todo_records(), selected_date)
-    start, end = summary["start"], summary["end"]
+class CalendarApp:
+    def __init__(self, root):
+        self.root = root
+        root.title("Health Log")
+        root.geometry("420x400")
 
-    win = tk.Toplevel(parent)
-    win.title("주간 리포트")
-    win.geometry("440x560")
-    win.transient(parent)          # 상세 화면 위에 표시 (입력 기능은 막지 않음)
+        today = date.today()
+        self.year, self.month = today.year, today.month
+        self.cal = calendar.Calendar(firstweekday=6)  # 6 = 일요일 시작
 
-    tk.Label(win, text="주간 리포트", font=("맑은 고딕", 15, "bold")).pack(pady=(14, 2))
-    tk.Label(win, text=f"{start.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}",
-             fg="gray").pack()
+        header = tk.Frame(root)
+        header.pack(pady=10)
+        tk.Button(header, text="◀", width=3, command=self.prev_month).pack(side="left")
+        self.title_label = tk.Label(header, width=14, font=("맑은 고딕", 14, "bold"))
+        self.title_label.pack(side="left", padx=5)
+        tk.Button(header, text="▶", width=3, command=self.next_month).pack(side="left")
 
-    if not summary["has_data"]:
-        tk.Label(win, text="이 주에는 기록된 데이터가 없습니다.\n칼로리나 할 일을 입력하면 여기에 요약돼요.",
-                 font=("맑은 고딕", 11), pady=60, justify="center").pack(expand=True)
-        tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=15)
-        return win
+        self.grid_frame = tk.Frame(root)
+        self.grid_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
-    # --- 칼로리 요약 ---
-    cal = summary["calorie"]
-    cal_frame = ttk.LabelFrame(win, text="주간 칼로리")
-    cal_frame.pack(fill="x", padx=15, pady=(12, 6))
-    for label, value in (("섭취", cal["intake"]), ("소모", cal["burn"]), ("순 칼로리", cal["net"])):
-        row = tk.Frame(cal_frame)
-        row.pack(fill="x", padx=10, pady=2)
-        tk.Label(row, text=label, width=10, anchor="w").pack(side="left")
-        text = f"{value:+,} kcal" if label == "순 칼로리" else f"{value:,} kcal"
-        tk.Label(row, text=text, anchor="e").pack(side="right")
+        self.draw()
 
-    # 요일별 표
-    table = ttk.Treeview(cal_frame, columns=("day", "intake", "burn", "net"),
-                         show="headings", height=7)
-    for col, head, w in (("day", "요일", 90), ("intake", "섭취", 80),
-                         ("burn", "소모", 80), ("net", "순", 80)):
-        table.heading(col, text=head)
-        table.column(col, width=w, anchor="center")
-    for d in summary["daily"]:
-        table.insert("", "end", values=(
-            f"{d['date'].strftime('%m/%d')} ({WEEKDAY_KR[d['date'].weekday()]})",
-            f"{d['intake']:,}", f"{d['burn']:,}", f"{d['net']:+,}"))
-    table.pack(fill="x", padx=10, pady=(4, 8))
+    def draw(self):
+        for w in self.grid_frame.winfo_children():
+            w.destroy()
+        self.title_label.config(text=f"{self.year}년 {self.month}월")
 
-    # --- 할 일 요약 ---
-    todo = summary["todo"]
-    todo_frame = ttk.LabelFrame(win, text="할 일 완료율")
-    todo_frame.pack(fill="both", expand=True, padx=15, pady=6)
+        for c, name in enumerate(WEEKDAYS):
+            fg = "red" if c == 0 else "blue" if c == 6 else "black"
+            tk.Label(self.grid_frame, text=name, fg=fg).grid(row=0, column=c, sticky="nsew")
 
-    if todo["total"] == 0:
-        tk.Label(todo_frame, text="이 주에 등록된 할 일이 없습니다.", fg="gray").pack(pady=15)
-    else:
-        tk.Label(todo_frame,
-                 text=f"{todo['rate']}%  ({todo['done']} / {todo['total']} 완료)",
-                 font=("맑은 고딕", 11, "bold")).pack(pady=(8, 2))
-        ttk.Progressbar(todo_frame, maximum=100, value=todo["rate"]).pack(fill="x", padx=10)
+        today = date.today()
+        for r, week in enumerate(self.cal.monthdayscalendar(self.year, self.month), start=1):
+            for c, day in enumerate(week):
+                if day == 0:
+                    continue
+                d = date(self.year, self.month, day)
+                is_today = d == today
+                tk.Button(
+                    self.grid_frame, text=str(day), width=4, height=2,
+                    bg="#cde7ff" if is_today else None,
+                    command=lambda d=d: show_detail_page(self.root, d),
+                ).grid(row=r, column=c, padx=1, pady=1, sticky="nsew")
 
-        tk.Label(todo_frame, text="미완료 할 일", anchor="w").pack(fill="x", padx=10, pady=(8, 0))
-        if todo["incomplete"]:
-            box = tk.Frame(todo_frame)
-            box.pack(fill="both", expand=True, padx=10, pady=(2, 8))
-            scroll = tk.Scrollbar(box)
-            scroll.pack(side="right", fill="y")
-            lb = tk.Listbox(box, height=5, yscrollcommand=scroll.set)
-            for t in sorted(todo["incomplete"], key=lambda x: x["date"]):
-                lb.insert("end", f"{t['date'].strftime('%m/%d')}  {t['title']}")
-            lb.pack(side="left", fill="both", expand=True)
-            scroll.config(command=lb.yview)
-        else:
-            tk.Label(todo_frame, text="모두 완료했어요!", fg="green").pack(pady=10)
+        for c in range(7):
+            self.grid_frame.columnconfigure(c, weight=1)
 
-    tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=12)
-    return win
+    def prev_month(self):
+        self.year, self.month = (self.year - 1, 12) if self.month == 1 else (self.year, self.month - 1)
+        self.draw()
 
+    def next_month(self):
+        self.year, self.month = (self.year + 1, 1) if self.month == 12 else (self.year, self.month + 1)
+        self.draw()
+
+
+def main():
+    ensure_data_files()   # data/ 폴더와 CSV(헤더 포함) 없으면 자동 생성
+    root = tk.Tk()
+    CalendarApp(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
