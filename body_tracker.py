@@ -79,9 +79,6 @@ def save_body_record(selected_date, height, weight, muscle, body_fat):
     with open(BODY_TRACKER_CSV, "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=BODY_TRACKER_HEADER)
 
-        if not file_exists:
-            writer.writeheader()
-
         writer.writerow(record)
 
     return record
