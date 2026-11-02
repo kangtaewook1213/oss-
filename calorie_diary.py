@@ -1,42 +1,133 @@
-def add_record(date, record_type, name, kcal):
-    """
-    식단 또는 운동 기록을 입력하고 저장한다.
+import csv
+import os
+import tkinter as tk
+from tkinter import messagebox
 
-    입력:
-    date - 날짜
-    record_type - 식단 또는 운동
-    name - 음식 또는 운동 이름
-    kcal - 칼로리
-    """
+from config import CALORIE_CSV, CALORIE_HEADER
 
-    # TODO: 입력한 기록을 CSV 파일에 저장
-    pass
+
+def read_calorie_records():
+    if not os.path.exists(CALORIE_CSV):
+        return []
+
+    records = []
+
+    with open(CALORIE_CSV, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            try:
+                records.append({
+                    "id": int(row["id"]),
+                    "date": row["date"],
+                    "type": row["type"],
+                    "name": row["name"],
+                    "kcal": int(row["kcal"]),
+                })
+            except (KeyError, ValueError):
+                continue
+
+    return records
+
+
+def next_calorie_id():
+    records = read_calorie_records()
+    return max((r["id"] for r in records), default=0) + 1
+
+
+def save_calorie_record(selected_date, record_type, name, kcal):
+    if record_type not in ("intake", "burn"):
+        raise ValueError("구분은 intake 또는 burn이어야 합니다.")
+
+    if not name.strip():
+        raise ValueError("기록 이름을 입력해 주세요.")
+
+    try:
+        kcal = int(kcal)
+    except ValueError:
+        raise ValueError("칼로리는 숫자로 입력해 주세요.")
+
+    record = {
+        "id": next_calorie_id(),
+        "date": selected_date.isoformat(),
+        "type": record_type,
+        "name": name.strip(),
+        "kcal": kcal,
+    }
+
+    file_exists = os.path.exists(CALORIE_CSV)
+
+    with open(CALORIE_CSV, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CALORIE_HEADER)
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(record)
 
 
 def manage_record(records):
-    """
-    저장된 칼로리 기록을 조회하고
-    수정하거나 삭제한다.
-
-    입력:
-    records - 저장된 칼로리 기록 목록
-    """
-
-    # TODO: 기록 조회, 수정, 삭제 기능 구현
+    # TODO: 조회, 수정, 삭제 기능 구현
     pass
 
 
-def calculate_calorie(records):
-    """
-    하루 동안의 칼로리를 계산한다.
-
-    식단 = 섭취 칼로리
-    운동 = 소모 칼로리
-    순 칼로리 = 섭취 칼로리 - 소모 칼로리
-
-    입력:
-    records - 하루 동안의 기록
-    """
-
-    # TODO: 섭취, 소모, 순 칼로리 계산
+def calculate_daily_calorie(selected_date):
+    # TODO: 섭취, 소모, 순수 칼로리 계산
     pass
+
+
+def show_calorie_page(parent, selected_date):
+    win = tk.Toplevel(parent)
+    win.title("칼로리 다이어리")
+    win.geometry("400x300")
+
+    tk.Label(
+        win,
+        text=f"{selected_date.isoformat()} 칼로리 기록",
+        font=("맑은 고딕", 13, "bold")
+    ).pack(pady=15)
+
+    record_type = tk.StringVar(value="intake")
+
+    tk.OptionMenu(
+        win,
+        record_type,
+        "intake",
+        "burn"
+    ).pack(pady=5)
+
+    name_entry = tk.Entry(win, width=30)
+    name_entry.pack(pady=5)
+
+    kcal_entry = tk.Entry(win, width=30)
+    kcal_entry.pack(pady=5)
+
+    def on_save():
+        try:
+            save_calorie_record(
+                selected_date,
+                record_type.get(),
+                name_entry.get(),
+                kcal_entry.get()
+            )
+
+            messagebox.showinfo(
+                "저장 완료",
+                "기록이 저장되었습니다.",
+                parent=win
+            )
+
+        except ValueError as e:
+            messagebox.showerror(
+                "입력 오류",
+                str(e),
+                parent=win
+            )
+
+    tk.Button(
+        win,
+        text="기록 저장",
+        command=on_save
+    ).pack(pady=15)
+
+    return win
