@@ -1,4 +1,4 @@
-"""주간 리포트: 날짜 계산 + CSV 읽기 + 주간 집계 (3단계)."""
+
 import csv
 import os
 from datetime import date, datetime, timedelta
@@ -28,7 +28,7 @@ def get_week_range(ref_date):
     """ref_date가 속한 주의 (시작일, 종료일) 반환. 기준은 WEEK_START."""
     ref_date = to_date(ref_date)
     if WEEK_START == "SUN":
-        offset = (ref_date.weekday() + 1) % 7          # 일요일=0 ... 토요일=6
+        offset = (ref_date.weekday() + 1) % 7   # 일요일=0 ... 토요일=6
     else:
         offset = ref_date.weekday()             # 월요일=0 ... 일요일=6
     start = ref_date - timedelta(days=offset)
@@ -102,7 +102,7 @@ def weekly_summary(calorie_records, todo_records, ref_date):
         d_burn = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "burn")
         daily.append({"date": d, "intake": d_in, "burn": d_burn, "net": d_in - d_burn})
 
-    week_todo = [t for t in todo_records if start <= t["date"] < end]
+    week_todo = [t for t in todo_records if start <= t["date"] <= end]
     done = sum(1 for t in week_todo if t["done"])
     total = len(week_todo)
 
