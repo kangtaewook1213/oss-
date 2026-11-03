@@ -13,9 +13,18 @@ SAMPLE_DIR = os.path.join(DATA_DIR, "sample")
 
 CALORIE_CSV = os.path.join(DATA_DIR, "calories.csv")
 TODO_CSV = os.path.join(DATA_DIR, "todo.csv")
+BODY_TRACKER_CSV = os.path.join(DATA_DIR, "body_tracker.csv")
 
 CALORIE_HEADER = ["id", "date", "type", "name", "kcal"]   # type: intake / burn
 TODO_HEADER = ["id", "date", "title", "done"]             # done: true / false
+BODY_TRACKER_HEADER = [
+    "id",
+    "date",
+    "height_cm",
+    "weight_kg",
+    "skeletal_muscle_mass_kg",
+    "body_fat_percentage",
+]
 
 
 def ensure_data_files():
@@ -24,7 +33,12 @@ def ensure_data_files():
     프로그램 시작 시(main) 한 번만 호출하면 된다.
     """
     os.makedirs(DATA_DIR, exist_ok=True)
-    for path, header in ((CALORIE_CSV, CALORIE_HEADER), (TODO_CSV, TODO_HEADER)):
+
+    for path, header in (
+        (CALORIE_CSV, CALORIE_HEADER),
+        (TODO_CSV, TODO_HEADER),
+        (BODY_TRACKER_CSV, BODY_TRACKER_HEADER),
+    ):
         if not os.path.exists(path):
             with open(path, "w", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(header)
