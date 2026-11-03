@@ -1,66 +1,14 @@
-<<<<<<< HEAD
-=======
 """실행: python main.py. 달력에서 날짜를 선택해 각 기능을 연다."""
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
 import calendar
 import datetime as dt
 import tkinter as tk
-<<<<<<< HEAD
-from tkinter import font as tkfont
-from tkinter import messagebox, ttk
-
-# daily_todo 모듈에서 데이터 처리 함수 및 서브 UI 클래스 임포트
-from daily_todo import load_todos, save_todos, TodoPage
-
-
-COLORS = {
-    "bg": "#F2F9F7",
-    "header": "#E4F4F3",
-    "white": "#FFFFFF",
-    "ink": "#294755",
-    "muted": "#718A90",
-    "line": "#DCECE7",
-    "blue_light": "#DDF1F8",
-    "blue": "#478CA5",
-    "green_light": "#DDF2DF",
-    "green": "#59A976",
-    "green_dark": "#43885C",
-    "row": "#F6FAF9",
-    "other": "#F5F9F8",
-    "other_text": "#A9BBB8",
-    "red": "#AD6666",
-}
-WEEKDAYS = ("월", "화", "수", "목", "금", "토", "일")
-
-
-class MainApplication(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Health Log")
-        self.geometry("1120x720")
-        self.minsize(960, 620)
-        self.configure(bg=COLORS["bg"])
-        
-        self.COLORS = COLORS
-        self.WEEKDAYS = WEEKDAYS
-        
-        self.storage_readable = True
-        self.selected_date = dt.date.today()
-        self.current_page = "calendar"
-        self.editing_id = None
-        self.all_todos = []
-        
-        self.font_family = self._find_font()
-        self.text_var = tk.StringVar()
-        self.nav_buttons = {}
-        self.active_scroll = None
-=======
 from datetime import date
 from tkinter import messagebox
 from config import ensure_data_files
 from calorie_diary import show_calorie_page
 from body_tracker import show_body_tracker
 from weekly_summary import show_weekly_report
+from daily_todo import show_daily_todo
 WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 
@@ -69,39 +17,16 @@ def open_calorie(parent, selected_date):
 
 
 def open_todo(parent, selected_date):
-    messagebox.showinfo('할 일', f'{selected_date} 할 일 입력 (구현 예정)', parent=parent)
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
+    show_daily_todo(parent, selected_date)
 
-        self._load_data()
-        self._build_header()
-        
-        self.body = tk.Frame(self, bg=COLORS["bg"])
-        self.body.pack(fill="both", expand=True, padx=20, pady=16)
-        
-        self.show_calendar_page()
-
-<<<<<<< HEAD
-    def _find_font(self):
-        available = set(tkfont.families(self))
-        for name in ("맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR"):
-            if name in available:
-                return name
-        return "TkDefaultFont"
-=======
 def open_inbody(parent, selected_date):
     show_body_tracker(parent, selected_date)
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
 
     def _font(self, size, *styles):
         return (self.font_family, size, *styles)
 
-<<<<<<< HEAD
-    def month_weeks(self, year, month):
-        return calendar.Calendar(firstweekday=0).monthdatescalendar(year, month)
-=======
 def open_weekly_report(parent, selected_date):
     show_weekly_report(parent, selected_date)
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
 
     def shift_month(self, date, delta):
         year, month_zero = divmod(date.year * 12 + date.month - 1 + delta, 12)
@@ -109,36 +34,6 @@ def open_weekly_report(parent, selected_date):
         day = min(date.day, calendar.monthrange(year, month)[1])
         return dt.date(year, month, day)
 
-<<<<<<< HEAD
-    def _load_data(self):
-        try:
-            self.all_todos = load_todos()
-        except (OSError, ValueError) as exc:
-            self.storage_readable = False
-            self.all_todos = []
-            messagebox.showerror(
-                "저장된 기록을 읽을 수 없어요",
-                f"기존 파일을 보호하기 위해 자동 저장을 중지합니다.\n\n이유: {exc}", parent=self,
-            )
-
-    def _save_data(self):
-        if not self.storage_readable:
-            return False
-        try:
-            save_todos(self.all_todos)
-            return True
-        except (OSError, ValueError):
-            return False
-
-    def _button(self, parent, text, command, *, bg=None, fg=None, size=10, bold=False, padx=11, pady=6):
-        bg = bg or COLORS["white"]
-        fg = fg or COLORS["ink"]
-        return tk.Button(
-            parent, text=text, command=command, font=self._font(size, *(('bold',) if bold else ())),
-            bg=bg, fg=fg, activebackground=COLORS["blue_light"], activeforeground=COLORS["ink"],
-            relief="flat", bd=0, highlightthickness=0, padx=padx, pady=pady, cursor="hand2",
-        )
-=======
 def show_detail_page(root, selected_date):
     win = tk.Toplevel(root)
     win.title(f'{selected_date.isoformat()} 상세')
@@ -147,7 +42,6 @@ def show_detail_page(root, selected_date):
     buttons = [('칼로리 입력', open_calorie), ('할 일 입력', open_todo), ('인바디 트래커', open_inbody), ('주간 리포트', open_weekly_report)]
     for text, handler in buttons:
         tk.Button(win, text=text, width=22, height=2, command=lambda h=handler: h(win, selected_date)).pack(pady=4)
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
 
     def _build_header(self):
         header = tk.Frame(self, bg=COLORS["header"])
@@ -172,102 +66,6 @@ def show_detail_page(root, selected_date):
             button.pack(side="left", padx=(0, 4))
             self.nav_buttons[key] = button
 
-<<<<<<< HEAD
-    def _clear_page(self, name):
-        self.current_page = name
-        for key, button in self.nav_buttons.items():
-            active = key == name
-            button.configure(
-                bg=COLORS["blue_light"] if active else COLORS["header"],
-                fg=COLORS["blue"] if active else COLORS["muted"],
-            )
-        self.active_scroll = None
-        for child in self.body.winfo_children():
-            child.destroy()
-
-    def _card(self, parent):
-        return tk.Frame(
-            parent, bg=COLORS["white"], highlightthickness=1,
-            highlightbackground=COLORS["line"], highlightcolor=COLORS["line"],
-        )
-
-    def _items(self, date=None):
-        target_date = (date or self.selected_date).isoformat()
-        return [item for item in self.all_todos if item["date"] == target_date]
-
-    def _redraw(self, preserve_scroll=True):
-        position = None
-        if preserve_scroll and self.active_scroll is not None:
-            position = self.active_scroll.canvas.yview()[0]
-            
-        if self.current_page == "calendar":
-            self.show_calendar_page()
-        elif self.current_page == "todo":
-            self.show_todo_page()
-            
-        if position is not None and self.active_scroll is not None:
-            self.update_idletasks()
-            self.active_scroll.canvas.yview_moveto(position)
-
-    def set_date(self, date):
-        if not isinstance(date, dt.date):
-            raise TypeError("date must be a datetime.date")
-        if date != self.selected_date and self.editing_id is not None:
-            self.cancel_edit(redraw=False)
-        self.selected_date = date
-        self._redraw(preserve_scroll=False)
-
-    def _change_day(self, amount):
-        try:
-            self.set_date(self.selected_date + dt.timedelta(days=amount))
-        except OverflowError:
-            pass
-
-    def _change_month(self, amount):
-        try:
-            self.set_date(self.shift_month(self.selected_date, amount))
-        except (ValueError, OverflowError):
-            pass
-
-    def _date_selectors(self, parent, *, show_month_arrows=False):
-        line = tk.Frame(parent, bg=COLORS["white"])
-        line.pack()
-        if show_month_arrows:
-            self._button(line, "‹", lambda: self._change_month(-1), bg=COLORS["row"], size=15, padx=10, pady=1).pack(side="left", padx=(0, 8))
-            
-        year_var = tk.StringVar(value=f"{self.selected_date.year}년")
-        month_var = tk.StringVar(value=f"{self.selected_date.month}월")
-        years = tuple(f"{year}년" for year in range(1900, 2101))
-        months = tuple(f"{month}월" for month in range(1, 13))
-        
-        style = ttk.Style(self)
-        if "clam" in style.theme_names():
-            style.theme_use("clam")
-            
-        year_box = ttk.Combobox(line, textvariable=year_var, values=years, state="readonly", width=7, font=self._font(10))
-        month_box = ttk.Combobox(line, textvariable=month_var, values=months, state="readonly", width=5, font=self._font(10))
-        year_box.pack(side="left", padx=(0, 6))
-        month_box.pack(side="left")
-
-        def on_change(event=None):
-            year = int(year_var.get()[:-1])
-            month = int(month_var.get()[:-1])
-            day = min(self.selected_date.day, calendar.monthrange(year, month)[1])
-            self.set_date(dt.date(year, month, day))
-
-        year_box.bind("<<ComboboxSelected>>", on_change)
-        month_box.bind("<<ComboboxSelected>>", on_change)
-        if show_month_arrows:
-            self._button(line, "›", lambda: self._change_month(1), bg=COLORS["row"], size=15, padx=10, pady=1).pack(side="left", padx=(8, 0))
-        return line
-
-    # '오늘의 달력' 메인 UI 렌더링
-    def show_calendar_page(self):
-        self._clear_page("calendar")
-        self.body.grid_rowconfigure(0, weight=1)
-        self.body.grid_columnconfigure(0, weight=7, uniform="columns")
-        self.body.grid_columnconfigure(1, weight=3, uniform="columns")
-=======
 class CalendarApp:
 
     def __init__(self, root):
@@ -317,7 +115,6 @@ class CalendarApp:
         year, month = divmod(self.year * 12 + self.month - 1 + amount, 12)
         self.year, self.month = (year, month + 1)
         self.draw()
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
 
         calendar_card = self._card(self.body)
         calendar_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
@@ -328,197 +125,6 @@ class CalendarApp:
         controls.pack(fill="x", pady=(0, 12))
         self._date_selectors(controls, show_month_arrows=True)
 
-<<<<<<< HEAD
-        weekdays = tk.Frame(main, bg=COLORS["white"])
-        weekdays.pack(fill="x", pady=(0, 3))
-        for column, name in enumerate(WEEKDAYS):
-            weekdays.grid_columnconfigure(column, weight=1, uniform="weekdays")
-            tk.Label(
-                weekdays, text=name, font=self._font(9, "bold"), bg=COLORS["white"],
-                fg=COLORS["blue"] if column >= 5 else COLORS["muted"], pady=4,
-            ).grid(row=0, column=column, sticky="ew")
-
-        grid = tk.Frame(main, bg=COLORS["line"])
-        grid.pack(fill="both", expand=True)
-        
-        weeks = self.month_weeks(self.selected_date.year, self.selected_date.month)
-        for column in range(7):
-            grid.grid_columnconfigure(column, weight=1, uniform="days")
-        for row, week in enumerate(weeks):
-            grid.grid_rowconfigure(row, weight=1, uniform="weeks")
-            for column, date in enumerate(week):
-                self._calendar_cell(grid, date, row, column)
-
-        summary_card = self._card(self.body)
-        summary_card.grid(row=0, column=1, sticky="nsew")
-        self._build_summary(summary_card)
-
-    def _calendar_cell(self, parent, date, row, column):
-        in_month = date.month == self.selected_date.month
-        selected = date == self.selected_date
-        bg = COLORS["green_light"] if selected else (COLORS["white"] if in_month else COLORS["other"])
-        fg = COLORS["ink"] if in_month else COLORS["other_text"]
-        
-        cell = tk.Frame(parent, bg=bg, cursor="hand2")
-        cell.grid(row=row, column=column, sticky="nsew", padx=(0, 1), pady=(0, 1))
-        
-        day_title = str(date.day)
-        if date == dt.date.today():
-            day_title += " · 오늘"
-            
-        day_label = tk.Label(cell, text=day_title, font=self._font(9, "bold"), bg=bg, fg=COLORS["green_dark"] if selected else fg, anchor="w")
-        day_label.pack(fill="x", padx=5, pady=(3, 1))
-        
-        parts = [cell, day_label]
-        items = self._items(date)
-        for item in items[:2]:
-            prefix = "✓ " if item["done"] else "· "
-            text = item["title"].replace("\n", " ")
-            if len(text) > 7:
-                text = text[:7] + "…"
-            item_color = COLORS["other_text"] if not in_month or item["done"] else COLORS["ink"]
-            label = tk.Label(cell, text=prefix + text, font=self._font(8), bg=bg, fg=item_color, anchor="w")
-            label.pack(fill="x", padx=5)
-            parts.append(label)
-            
-        if len(items) > 2:
-            more = tk.Label(cell, text=f"+{len(items) - 2}개", font=self._font(8), bg=bg, fg=COLORS["blue"], anchor="w")
-            more.pack(fill="x", padx=5)
-            parts.append(more)
-            
-        for widget in parts:
-            widget.bind("<Button-1>", lambda event, chosen=date: self.set_date(chosen))
-
-    def _build_summary(self, card):
-        inner = tk.Frame(card, bg=COLORS["white"])
-        inner.pack(fill="both", expand=True, padx=16, pady=16)
-        
-        date = self.selected_date
-        date_text = f"{date.month}월 {date.day}일 {WEEKDAYS[date.weekday()]}요일"
-        tk.Label(inner, text=date_text, font=self._font(13, "bold"), bg=COLORS["white"], fg=COLORS["ink"]).pack(anchor="w")
-        
-        items = self._items()
-        done_count = sum(item["done"] for item in items)
-        tk.Label(
-            inner, text=f"할 일 {len(items)}개 중 {done_count}개 완료",
-            font=self._font(9), bg=COLORS["white"], fg=COLORS["muted"],
-        ).pack(anchor="w", pady=(5, 12))
-        
-        self._button(
-            inner, "자세히 관리  ›", self.show_todo_page, bg=COLORS["blue_light"],
-            fg=COLORS["blue"], size=9, bold=True, pady=8,
-        ).pack(side="bottom", fill="x", pady=(12, 0))
-        
-        scroll = self.ScrollableFrame(inner, COLORS["white"])
-        self.active_scroll = scroll
-        scroll.pack(fill="both", expand=True)
-        
-        if not items:
-            label = tk.Label(scroll.content, text="이 날짜에는 할 일이 없어요.\n할 일을 추가해 보세요.", font=self._font(9), bg=COLORS["row"], fg=COLORS["muted"], justify="left", anchor="w", padx=12, pady=18)
-            label.pack(fill="x")
-            scroll.enable_scroll(label)
-            return
-            
-        for item in items:
-            row = tk.Frame(scroll.content, bg=COLORS["row"])
-            row.pack(fill="x", pady=(0, 6))
-            mark = "✓" if item["done"] else "○"
-            flag = self._button(row, mark, lambda item_id=item["id"]: self.toggle_item(item_id), bg=COLORS["row"], fg=COLORS["green_dark"], size=12, bold=True, padx=7, pady=8)
-            flag.pack(side="left", anchor="n")
-            
-            text_box = tk.Frame(row, bg=COLORS["row"])
-            text_box.pack(side="left", fill="both", expand=True, pady=7)
-            styles = ("overstrike",) if item["done"] else ()
-            label = tk.Label(text_box, text=item["title"], font=self._font(9, *styles), bg=COLORS["row"], fg=COLORS["muted"] if item["done"] else COLORS["ink"], anchor="w", justify="left", wraplength=180)
-            label.pack(fill="x")
-            row.bind("<Configure>", lambda event, label=label: label.configure(wraplength=max(80, event.width - 65)))
-            scroll.enable_scroll(row, flag, text_box, label)
-
-    # '오늘의 할 일' 페이지 호출 연결 메서드
-    def show_todo_page(self):
-        TodoPage(self, self.body)
-
-    def toggle_item(self, item_id):
-        item = next((item for item in self.all_todos if item["id"] == item_id), None)
-        if item is None:
-            return
-        item["done"] = not item["done"]
-        self._save_data()
-        self._redraw()
-
-    def delete_item(self, item_id):
-        self.all_todos = [item for item in self.all_todos if item["id"] != item_id]
-        if self.editing_id == item_id:
-            self.cancel_edit(redraw=False)
-        self._save_data()
-        self._redraw()
-
-    def start_edit(self, item_id):
-        item = next((item for item in self.all_todos if item["id"] == item_id), None)
-        if item is None:
-            return
-        self.editing_id = item_id
-        self.text_var.set(item["title"])
-        self.show_todo_page()
-
-    def cancel_edit(self, redraw=True):
-        self.editing_id = None
-        self.text_var.set("")
-        if redraw:
-            self._redraw()
-
-    def show_empty_page(self, key, title):
-        self._clear_page(key)
-        card = self._card(self.body)
-        card.pack(fill="both", expand=True)
-        center = tk.Frame(card, bg=COLORS["white"])
-        center.place(relx=0.5, rely=0.5, anchor="center")
-        tk.Label(center, text=title, font=self._font(15, "bold"), bg=COLORS["white"], fg=COLORS["ink"]).pack(pady=(0, 8))
-        tk.Label(center, text="이 기능은 준비 중이에요.", font=self._font(10), bg=COLORS["white"], fg=COLORS["muted"]).pack()
-
-    class ScrollableFrame(tk.Frame):
-        def __init__(self, parent, bg):
-            super().__init__(parent, bg=bg)
-            self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
-            self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-            self.canvas.configure(yscrollcommand=self.scrollbar.set)
-            self.scrollbar.pack(side="right", fill="y")
-            self.canvas.pack(side="left", fill="both", expand=True)
-            self.content = tk.Frame(self.canvas, bg=bg)
-            self.window_id = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
-            self.content.bind("<Configure>", self._update_scrollregion)
-            self.canvas.bind("<Configure>", self._resize_content)
-            self.enable_scroll(self.canvas, self.content)
-
-        def _update_scrollregion(self, event=None):
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-        def _resize_content(self, event):
-            self.canvas.itemconfigure(self.window_id, width=event.width)
-
-        def enable_scroll(self, *widgets):
-            for widget in widgets:
-                widget.bind("<MouseWheel>", self._scroll)
-                widget.bind("<Button-4>", self._scroll)
-                widget.bind("<Button-5>", self._scroll)
-
-        def _scroll(self, event):
-            if getattr(event, "num", None) == 4:
-                direction = -1
-            elif getattr(event, "num", None) == 5:
-                direction = 1
-            elif event.delta:
-                direction = -1 if event.delta > 0 else 1
-            else:
-                return "break"
-            self.canvas.yview_scroll(direction, "units")
-            return "break"
-
-
-if __name__ == "__main__":
-    app = MainApplication()
-    app.mainloop()
-=======
 def main():
     ensure_data_files()
     root = tk.Tk()
@@ -526,4 +132,3 @@ def main():
     root.mainloop()
 if __name__ == '__main__':
     main()
->>>>>>> 411b419e37425ee8ad41ec1f26aad09606c1b50a
