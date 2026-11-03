@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-
-import csv
-import os
-from datetime import date, datetime, timedelta
-=======
 """주간 리포트: 집계(weekly_summary) + Tkinter 화면(show_weekly_report).
 
 main.py 연결:
@@ -15,7 +9,6 @@ import os
 import tkinter as tk
 from datetime import date, datetime, timedelta
 from tkinter import ttk
->>>>>>> 8af9f9b5628cf31d8d4e0ff6f74bc747b1069ab1
 
 from config import CALORIE_CSV, TODO_CSV
 
@@ -24,8 +17,6 @@ WEEK_START = "SUN"
 
 WEEKDAY_KR = ["월", "화", "수", "목", "금", "토", "일"]  # date.weekday() 순서
 TRUE_VALUES = ("1", "true", "y", "yes", "완료")
-<<<<<<< HEAD
-=======
 
 
 # ---------------------------------------------------------------
@@ -215,7 +206,6 @@ def show_weekly_report(parent, selected_date):
 
     tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=12)
     return win
->>>>>>> 8af9f9b5628cf31d8d4e0ff6f74bc747b1069ab1
 
 
 
@@ -225,42 +215,5 @@ def weekly_report_button(parent, get_selected_date):
 
     get_selected_date: 호출 시점의 선택된 날짜를 돌려주는 함수 (예: lambda: selected_date)
     """
-<<<<<<< HEAD
-    calorie_records = calorie_records or []
-    todo_records = todo_records or []
-    start, end = get_week_range(ref_date)
-
-    week_cal = [r for r in calorie_records if start <= r["date"] <= end]
-    intake = sum(r["kcal"] for r in week_cal if r["type"] == "intake")
-    burn = sum(r["kcal"] for r in week_cal if r["type"] == "burn")
-
-    daily = []
-    for i in range(7):
-        d = start + timedelta(days=i)
-        d_in = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "intake")
-        d_burn = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "burn")
-        daily.append({"date": d, "intake": d_in, "burn": d_burn, "net": d_in - d_burn})
-
-    week_todo = [t for t in todo_records if start <= t["date"] <= end]
-    done = sum(1 for t in week_todo if t["done"])
-    total = len(week_todo)
-
-    return {
-        "start": start,
-        "end": end,
-        "has_data": bool(week_cal or week_todo),
-        "calorie": {"intake": intake, "burn": burn,
-                    "net": intake - burn, "records": week_cal},
-        "daily": daily,
-        "todo": {
-            "total": total,
-            "done": done,
-            "rate": round(done / total * 100) if total else 0,
-            "items": week_todo,
-            "incomplete": [t for t in week_todo if not t["done"]],
-        },
-    }
-=======
     return tk.Button(parent, text="주간 리포트",
                      command=lambda: show_weekly_report(parent, get_selected_date()))
->>>>>>> 8af9f9b5628cf31d8d4e0ff6f74bc747b1069ab1
