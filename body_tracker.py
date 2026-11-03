@@ -6,8 +6,6 @@ from datetime import date
 from tkinter import messagebox, ttk
 
 from config import BODY_TRACKER_CSV, BODY_TRACKER_HEADER
-from ui import style_widgets
-
 
 def read_body_records():
     """인바디 CSV를 읽어 리스트로 반환한다. 파일이 없으면 빈 리스트를 반환한다."""
