@@ -14,7 +14,7 @@ SAMPLE_DIR = os.path.join(DATA_DIR, "sample")
 CALORIE_CSV = os.path.join(DATA_DIR, "calories.csv")
 TODO_CSV = os.path.join(DATA_DIR, "todo.csv")
 
-CALORIE_HEADER = ["id", "date", "type", "name", "kcal"]   # type: intake / burn
+CALORIE_HEADER = ["id", "date", "type", "name", "kcal"]   # 구분: intake / burn
 TODO_HEADER = ["id", "date", "title", "done"]             # done: true / false
 
 
