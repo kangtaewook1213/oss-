@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from config import CALORIE_CSV, CALORIE_HEADER
-from ui import style_widgets
+
 
 TYPE_CODES = {"식단 (섭취)": "intake", "운동 (소모)": "burn"}
 TYPE_LABELS = {"intake": "식단 (섭취)", "burn": "운동 (소모)"}
