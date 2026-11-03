@@ -31,7 +31,7 @@ def read_calorie_records():
 
 
 def next_calorie_id():
-    records = reaFd_calorie_records()
+    records = read_calorie_records()
     return max((r["id"] for r in records), default=0) + 1
 
 
@@ -42,14 +42,13 @@ def save_calorie_record(selected_date, record_type, name, kcal):
     if not name.strip():
         raise ValueError("기록 이름을 입력해 주세요.")
 
-    
-try:
-    kcal = int(kcal)
-except ValueError:
-    raise ValueError("칼로리는 숫자로 입력해 주세요.")
+    try:
+        kcal = int(kcal)
+    except ValueError:
+        raise ValueError("칼로리는 숫자로 입력해 주세요.")
 
-if kcal < 0:
-    raise ValueError("칼로리는 0 이상이어야 합니다.")
+    if kcal < 0:
+        raise ValueError("칼로리는 0 이상이어야 합니다.")
 
     record = {
         "id": next_calorie_id(),
