@@ -1,7 +1,9 @@
-
+"""주간 리포트: 집계 + 칼로리 요약/요일별 표 화면 (5단계)."""
 import csv
 import os
+import tkinter as tk
 from datetime import date, datetime, timedelta
+from tkinter import ttk
 
 from config import CALORIE_CSV, TODO_CSV
 
@@ -102,7 +104,7 @@ def weekly_summary(calorie_records, todo_records, ref_date):
         d_burn = sum(r["kcal"] for r in week_cal if r["date"] == d and r["type"] == "burn")
         daily.append({"date": d, "intake": d_in, "burn": d_burn, "net": d_in - d_burn})
 
-    week_todo = [t for t in todo_records if start <= t["date"] < end]
+    week_todo = [t for t in todo_records if start <= t["date"] <= end]
     done = sum(1 for t in week_todo if t["done"])
     total = len(week_todo)
 
@@ -121,3 +123,54 @@ def weekly_summary(calorie_records, todo_records, ref_date):
             "incomplete": [t for t in week_todo if not t["done"]],
         },
     }
+
+
+# ---------------------------------------------------------------
+# 화면
+# ---------------------------------------------------------------
+def show_weekly_report(parent, selected_date):
+    """선택한 날짜가 속한 주의 리포트 창을 연다. 닫으면 parent(상세 화면)로 돌아간다."""
+    summary = weekly_summary(load_calorie_records(), load_todo_records(), selected_date)
+    start, end = summary["start"], summary["end"]
+
+    win = tk.Toplevel(parent)
+    win.title("주간 리포트")
+    win.geometry("440x560")
+    win.transient(parent)          # 상세 화면 위에 표시 (입력 기능은 막지 않음)
+
+    tk.Label(win, text="주간 리포트", font=("맑은 고딕", 15, "bold")).pack(pady=(14, 2))
+    tk.Label(win, text=f"{start.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}",
+             fg="gray").pack()
+
+    if not summary["has_data"]:
+        tk.Label(win, text="이 주에는 기록된 데이터가 없습니다.\n칼로리나 할 일을 입력하면 여기에 요약돼요.",
+                 font=("맑은 고딕", 11), pady=60, justify="center").pack(expand=True)
+        tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=15)
+        return win
+
+    # --- 칼로리 요약 ---
+    cal = summary["calorie"]
+    cal_frame = ttk.LabelFrame(win, text="주간 칼로리")
+    cal_frame.pack(fill="x", padx=15, pady=(12, 6))
+    for label, value in (("섭취", cal["intake"]), ("소모", cal["burn"]), ("순 칼로리", cal["net"])):
+        row = tk.Frame(cal_frame)
+        row.pack(fill="x", padx=10, pady=2)
+        tk.Label(row, text=label, width=10, anchor="w").pack(side="left")
+        text = f"{value:+,} kcal" if label == "순 칼로리" else f"{value:,} kcal"
+        tk.Label(row, text=text, anchor="e").pack(side="right")
+
+    # 요일별 표
+    table = ttk.Treeview(cal_frame, columns=("day", "intake", "burn", "net"),
+                         show="headings", height=7)
+    for col, head, w in (("day", "요일", 90), ("intake", "섭취", 80),
+                         ("burn", "소모", 80), ("net", "순", 80)):
+        table.heading(col, text=head)
+        table.column(col, width=w, anchor="center")
+    for d in summary["daily"]:
+        table.insert("", "end", values=(
+            f"{d['date'].strftime('%m/%d')} ({WEEKDAY_KR[d['date'].weekday()]})",
+            f"{d['intake']:,}", f"{d['burn']:,}", f"{d['net']:+,}"))
+    table.pack(fill="x", padx=10, pady=(4, 8))
+
+    tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=12)
+    return win
