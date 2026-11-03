@@ -36,7 +36,7 @@
 ## 실행 방법
 
 ### 요구 사항
-- Python 3.8 이상 권장
+- Python 3.1 이상 권장
 - 별도 패키지 설치 없음 (표준 라이브러리 `tkinter`, `csv`, `datetime`만 사용)
 
 > Linux에서 `tkinter`가 없다면 `sudo apt install python3-tk`로 설치하세요.
