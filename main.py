@@ -5,11 +5,7 @@ from datetime import date
 from tkinter import messagebox
 from config import ensure_data_files
 from calorie_diary import show_calorie_page
-<<<<<<< HEAD
-#아직 없음 from body_tracker import show_body_tracker
-=======
 from body_tracker import show_body_tracker
->>>>>>> origin/conflict-practice
 from weekly_summary import show_weekly_report
 WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
