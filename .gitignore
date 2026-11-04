@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Health Log: 실행 시 자동 생성되는 개인 기록 (커밋하지 않음)
+data/*.csv
