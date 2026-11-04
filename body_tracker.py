@@ -162,5 +162,5 @@ def show_body_tracker(parent, selected_date, embedded=False):
 
     notebook.add(input_frame, text="입력·저장")
 
-    style_widgets(win)
+    
     return win
