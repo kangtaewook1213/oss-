@@ -44,9 +44,11 @@
 > Linux에서 `tkinter`가 없다면 `sudo apt install python3-tk`로 설치하세요.
 
 ### 실행
+(todo부분 미완료로 인해 샘플 데이터 사용)
 ```bash
 git clone https://github.com/kangtaewook1213/oss-.git
 cd oss-
+copy /Y data\sample\todo.csv data\  
 python main.py
 ```
 
