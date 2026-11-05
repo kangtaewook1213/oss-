@@ -1,5 +1,4 @@
 """프로젝트 공용 설정: 데이터 경로와 CSV 헤더를 정의한다.
-
 모든 모듈은 BASE_DIR 등을 새로 만들지 말고 이 파일에서 import해서 사용한다.
     from config import CALORIE_CSV, TODO_CSV
 """
