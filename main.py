@@ -7,6 +7,7 @@
 - selected_date는 datetime.date 객체로 전달한다. (문자열이 필요하면 .isoformat())
 """
 import calendar
+import datetime as dt
 import tkinter as tk
 from datetime import date
 
@@ -15,8 +16,13 @@ from calorie_diary import show_calorie_page
 from body_tracker import show_body_tracker
 from daily_todo import show_daily_todo
 from weekly_summary import show_weekly_report
+<<<<<<< HEAD
+from daily_todo import show_daily_todo
+WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+=======
 
 WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"]  # 일요일 시작 (주간 리포트 기준과 동일)
+>>>>>>> main
 
 
 # ---------------------------------------------------------------
@@ -28,15 +34,25 @@ def open_calorie(parent, selected_date):
 
 def open_todo(parent, selected_date):
     show_daily_todo(parent, selected_date)
+<<<<<<< HEAD
+=======
 
+>>>>>>> main
 
 def open_inbody(parent, selected_date):
     show_body_tracker(parent, selected_date)
 
+    def _font(self, size, *styles):
+        return (self.font_family, size, *styles)
 
 def open_weekly_report(parent, selected_date):
     show_weekly_report(parent, selected_date)
 
+    def shift_month(self, date, delta):
+        year, month_zero = divmod(date.year * 12 + date.month - 1 + delta, 12)
+        month = month_zero + 1
+        day = min(date.day, calendar.monthrange(year, month)[1])
+        return dt.date(year, month, day)
 
 # ---------------------------------------------------------------
 # 상세 페이지
@@ -59,6 +75,28 @@ def show_detail_page(root, selected_date):
         tk.Button(win, text=text, width=22, height=2,
                   command=lambda h=handler: h(win, selected_date)).pack(pady=4)
 
+    def _build_header(self):
+        header = tk.Frame(self, bg=COLORS["header"])
+        header.pack(fill="x")
+        tk.Label(
+            header, text="HEALTH LOG", font=self._font(16, "bold"),
+            bg=COLORS["header"], fg=COLORS["ink"],
+        ).pack(side="left", padx=(20, 22), pady=12)
+        
+        nav = tk.Frame(header, bg=COLORS["header"])
+        nav.pack(side="left", fill="x", expand=True)
+        
+        pages = [
+            ("calendar", "오늘의 달력", self.show_calendar_page),
+            ("todo", "오늘의 할 일", self.show_todo_page),
+            ("calorie", "칼로리 다이어리", lambda: self.show_empty_page("calorie", "칼로리 다이어리")),
+            ("report", "주간 건강 리포트", lambda: self.show_empty_page("report", "주간 건강 리포트")),
+            ("profile", "내 정보", lambda: self.show_empty_page("profile", "내 정보")),
+        ]
+        for key, label, action in pages:
+            button = self._button(nav, label, action, bg=COLORS["header"], fg=COLORS["muted"], size=9, bold=True, padx=10)
+            button.pack(side="left", padx=(0, 4))
+            self.nav_buttons[key] = button
 
 # ---------------------------------------------------------------
 # 달력
@@ -118,6 +156,14 @@ class CalendarApp:
         self.year, self.month = (self.year + 1, 1) if self.month == 12 else (self.year, self.month + 1)
         self.draw()
 
+        calendar_card = self._card(self.body)
+        calendar_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        main = tk.Frame(calendar_card, bg=COLORS["white"])
+        main.pack(fill="both", expand=True, padx=14, pady=14)
+        
+        controls = tk.Frame(main, bg=COLORS["white"])
+        controls.pack(fill="x", pady=(0, 12))
+        self._date_selectors(controls, show_month_arrows=True)
 
 def main():
     ensure_data_files()   # data/ 폴더와 CSV(헤더 포함) 없으면 자동 생성
