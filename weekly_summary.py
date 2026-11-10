@@ -136,12 +136,21 @@ def weekly_summary(calorie_records, todo_records, ref_date):
 def show_weekly_report(parent, selected_date):
     """선택한 날짜가 속한 주의 리포트 창을 연다. 닫으면 parent(상세 화면)로 돌아간다."""
     summary = weekly_summary(load_calorie_records(), load_todo_records(), selected_date)
-    start, end = summary["start"], summary["end"]
 
     win = tk.Toplevel(parent)
     win.title("주간 리포트")
     win.geometry("440x560")
     win.transient(parent)          # 상세 화면 위에 표시 (입력 기능은 막지 않음)
+
+    content = tk.Frame(win)
+    content.pack(fill="both", expand=True)
+    render_weekly_report(content, summary, win.destroy)
+    return win
+
+
+def render_weekly_report(win, summary, on_close):
+    """summary 내용을 win(프레임/창) 안에 그린다. on_close: 닫기 버튼 동작."""
+    start, end = summary["start"], summary["end"]
 
     tk.Label(win, text="주간 리포트", font=("맑은 고딕", 15, "bold")).pack(pady=(14, 2))
     tk.Label(win, text=f"{start.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}",
@@ -150,8 +159,8 @@ def show_weekly_report(parent, selected_date):
     if not summary["has_data"]:
         tk.Label(win, text="이 주에는 기록된 데이터가 없습니다.\n칼로리나 할 일을 입력하면 여기에 요약돼요.",
                  font=("맑은 고딕", 11), pady=60, justify="center").pack(expand=True)
-        tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=15)
-        return win
+        tk.Button(win, text="닫기", width=12, command=on_close).pack(pady=15)
+        return
 
     # --- 칼로리 요약 ---
     cal = summary["calorie"]
@@ -204,8 +213,7 @@ def show_weekly_report(parent, selected_date):
         else:
             tk.Label(todo_frame, text="모두 완료했어요!", fg="green").pack(pady=10)
 
-    tk.Button(win, text="닫기", width=12, command=win.destroy).pack(pady=12)
-    return win
+    tk.Button(win, text="닫기", width=12, command=on_close).pack(pady=12)
 
 
 
