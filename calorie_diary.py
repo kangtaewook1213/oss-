@@ -229,6 +229,7 @@ def show_calorie_page(parent, selected_date, embedded=False):
             record_id = int(selected_values()[0])
             if messagebox.askyesno("삭제 확인", "선택한 기록을 삭제할까요?", parent=win):
                 delete_calorie_record(record_id)
+                edit_type.set("식단 (섭취)")
                 edit_name.set("")
                 edit_kcal.set("")
                 refresh_all()
