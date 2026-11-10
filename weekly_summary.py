@@ -134,17 +134,37 @@ def weekly_summary(calorie_records, todo_records, ref_date):
 # 화면
 # ---------------------------------------------------------------
 def show_weekly_report(parent, selected_date):
-    """선택한 날짜가 속한 주의 리포트 창을 연다. 닫으면 parent(상세 화면)로 돌아간다."""
-    summary = weekly_summary(load_calorie_records(), load_todo_records(), selected_date)
+    """선택한 날짜가 속한 주의 리포트 창을 연다. 닫으면 parent(상세 화면)로 돌아간다.
+
+    ◀ 지난주 / 다음주 ▶ 버튼으로 같은 창에서 한 주씩 이동한다.
+    """
+    current = {"date": to_date(selected_date)}
 
     win = tk.Toplevel(parent)
     win.title("주간 리포트")
-    win.geometry("440x560")
+    win.geometry("440x600")
     win.transient(parent)          # 상세 화면 위에 표시 (입력 기능은 막지 않음)
 
+    nav = tk.Frame(win)
+    nav.pack(fill="x", padx=15, pady=(10, 0))
     content = tk.Frame(win)
     content.pack(fill="both", expand=True)
-    render_weekly_report(content, summary, win.destroy)
+
+    def redraw():
+        for widget in content.winfo_children():
+            widget.destroy()
+        # 이동할 때마다 CSV를 다시 읽어, 창을 연 뒤 입력한 기록도 반영한다.
+        summary = weekly_summary(load_calorie_records(), load_todo_records(), current["date"])
+        render_weekly_report(content, summary, win.destroy)
+
+    def move_week(weeks):
+        current["date"] += timedelta(weeks=weeks)
+        redraw()
+
+    tk.Button(nav, text="◀ 지난주", command=lambda: move_week(-1)).pack(side="left")
+    tk.Button(nav, text="다음주 ▶", command=lambda: move_week(1)).pack(side="right")
+
+    redraw()
     return win
 
 
