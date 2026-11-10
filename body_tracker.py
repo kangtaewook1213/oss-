@@ -91,9 +91,28 @@ def save_body_record(selected_date, height, weight, muscle, body_fat):
 
     return record
 
-def show_body_tracker(parent, selected_date, embedded=False):
-    """인바디 수치 입력 및 저장 화면을 표시한다."""
+def body_record_for_date(selected_date):
+    """Issue #3/#4: 선택 날짜의 가장 최근 인바디 기록을 반환한다."""
+    target = selected_date.isoformat()
+    matches = [r for r in read_body_records() if r["date"] == target]
 
+    if not matches:
+        return None
+
+    return max(matches, key=lambda r: r["id"])
+
+
+def calculate_bmi(height_cm, weight_kg):
+    """Issue #3: BMI 자동 계산."""
+    height_m = float(height_cm) / 100
+
+    if height_m <= 0:
+        raise ValueError("키는 0보다 커야 합니다.")
+
+    return round(float(weight_kg) / (height_m ** 2), 1)
+
+def show_body_tracker(parent, selected_date, embedded=False):
+    """Issue #2~#4를 한 창에서 제공한다."""
     if embedded:
         win = tk.Frame(parent, bg="#FFFFFF")
         win.pack(fill="both", expand=True)
@@ -101,10 +120,12 @@ def show_body_tracker(parent, selected_date, embedded=False):
         win = tk.Toplevel(parent)
         win.title(f"{selected_date.isoformat()} 건강 기록")
         win.geometry("760x580")
+        win.minsize(700, 540)
 
     notebook = ttk.Notebook(win)
     notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
+    # 1. 입력/저장
     input_frame = tk.Frame(notebook, padx=15, pady=15)
 
     tk.Label(
@@ -123,13 +144,36 @@ def show_body_tracker(parent, selected_date, embedded=False):
     entries = {}
 
     for row, (label, key) in enumerate(fields, start=1):
-        tk.Label(input_frame, text=label).grid(
-            row=row, column=0, sticky="e", padx=5, pady=5
-        )
-
+        tk.Label(input_frame, text=label).grid(row=row, column=0, sticky="e", padx=5, pady=5)
         entry = tk.Entry(input_frame, width=24)
         entry.grid(row=row, column=1, sticky="w")
         entries[key] = entry
+
+    # 2. BMI/현재 수치
+    bmi_frame = tk.Frame(notebook, padx=20, pady=20)
+
+    bmi_label = tk.Label(bmi_frame, text="", font=("맑은 고딕", 12), justify="left")
+    bmi_label.pack(anchor="w", pady=10)
+
+    def refresh_bmi():
+            record = body_record_for_date(selected_date)
+    
+            if record is None:
+                bmi_label.config(text="선택 날짜의 인바디 기록이 없습니다.")
+                return
+    
+            bmi = calculate_bmi(record["height_cm"], record["weight_kg"])
+    
+            bmi_label.config(
+                text=(
+                    f"BMI: {bmi}\n"
+                    f"키: {record['height_cm']:g} cm\n"
+                    f"체중: {record['weight_kg']:g} kg\n"
+                    f"골격근량: {record['skeletal_muscle_mass_kg']:g} kg\n"
+                    f"체지방률: {record['body_fat_percentage']:g}%"
+                )
+            )
+    
 
     def on_save():
         try:
