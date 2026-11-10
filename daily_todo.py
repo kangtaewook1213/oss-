@@ -201,6 +201,14 @@ def show_daily_todo(parent, selected_date):
                 def start_edit(item=todo):
                     editing_item[0] = item
                     refresh_list()
+                
+                # [수정] 버튼
+                tk.Button(
+                    row,
+                    text="수정",
+                    command=start_edit,
+                    width=5
+                ).pack(side="right", padx=2)
 
                 # [삭제] 버튼 (우측 끝에 배치)
                 tk.Button(
@@ -210,13 +218,7 @@ def show_daily_todo(parent, selected_date):
                     width=5
                 ).pack(side="right")
 
-                # [수정] 버튼 ([삭제] 버튼 바로 왼쪽에 배치)
-                tk.Button(
-                    row,
-                    text="수정",
-                    command=start_edit,
-                    width=5
-                ).pack(side="right", padx=2)
+
 
     def add_todo(event=None):
         """새로운 할 일 추가"""
