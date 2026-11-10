@@ -1,5 +1,4 @@
-
-"""선택한 날짜의 할 일을 조회하고 추가·완료·삭제한다."""
+"""선택한 날짜의 할 일을 조회하고 추가·완료·삭제 및 수정한다."""
 import csv
 import tkinter as tk
 from tkinter import messagebox
@@ -69,12 +68,15 @@ def show_daily_todo(parent, selected_date):
     ).pack(pady=15)
 
     todos = load_todos(selected_date)
+    
+    # 현재 인라인 수정 중인 항목을 저장하는 변수 (None이면 일반 모드)
+    editing_item = [None]
 
     # 할 일 목록 영역
     list_frame = tk.Frame(win)
     list_frame.pack(fill="both", expand=True, padx=15)
 
-    # 입력 영역
+    # 하단 입력 영역 (신규 추가용)
     input_frame = tk.Frame(win)
     input_frame.pack(fill="x", padx=15, pady=12)
 
@@ -83,7 +85,6 @@ def show_daily_todo(parent, selected_date):
 
     def refresh_list():
         """할 일 목록 새로고침"""
-
         for widget in list_frame.winfo_children():
             widget.destroy()
 
@@ -99,58 +100,126 @@ def show_daily_todo(parent, selected_date):
             row = tk.Frame(list_frame)
             row.pack(fill="x", pady=3)
 
-            checked = tk.BooleanVar(value=todo["done"])
+            # 만약 현재 항목이 수정 중인 상태라면 해당 위치에 바로 Entry 생성
+            if editing_item[0] == todo:
+                inline_entry = tk.Entry(row)
+                inline_entry.insert(0, todo["title"])
+                inline_entry.pack(side="left", fill="x", expand=True, padx=5)
+                inline_entry.focus_set()
 
-            def toggle(item=todo, variable=checked):
-                old_value = item["done"]
-                item["done"] = variable.get()
+                def save_inline(item=todo, ent=inline_entry):
+                    new_title = ent.get().strip()
+                    if not new_title:
+                        messagebox.showwarning(
+                            "입력 확인",
+                            "할 일 내용을 입력해 주세요.",
+                            parent=win
+                        )
+                        return
 
-                try:
-                    save_todos(todos, selected_date)
-                except (OSError, csv.Error) as error:
-                    item["done"] = old_value
-                    variable.set(old_value)
-                    messagebox.showerror(
-                        "저장 오류", str(error), parent=win
-                    )
+                    old_title = item["title"]
+                    item["title"] = new_title
 
-            tk.Checkbutton(
-                row,
-                text=todo["title"],
-                variable=checked,
-                command=toggle,
-                anchor="w"
-            ).pack(side="left", fill="x", expand=True)
+                    try:
+                        save_todos(todos, selected_date)
+                        editing_item[0] = None
+                        refresh_list()
+                    except (OSError, csv.Error) as error:
+                        item["title"] = old_title
+                        messagebox.showerror(
+                            "저장 오류", str(error), parent=win
+                        )
+                        refresh_list()
 
-            def delete(item=todo):
-                if not messagebox.askyesno(
-                    "삭제 확인",
-                    "이 할 일을 삭제할까요?",
-                    parent=win
-                ):
-                    return
+                inline_entry.bind("<Return>", lambda e: save_inline())
 
-                todos.remove(item)
-
-                try:
-                    save_todos(todos, selected_date)
-                    refresh_list()
-                except (OSError, csv.Error) as error:
-                    todos.append(item)
-                    messagebox.showerror(
-                        "저장 오류", str(error), parent=win
-                    )
+                def cancel_edit():
+                    editing_item[0] = None
                     refresh_list()
 
-            tk.Button(
-                row,
-                text="삭제",
-                command=delete
-            ).pack(side="right")
+                # [취소] 버튼
+                tk.Button(
+                    row,
+                    text="취소",
+                    command=cancel_edit,
+                    width=5
+                ).pack(side="right", padx=2)
+
+                # [확인] 버튼
+                tk.Button(
+                    row,
+                    text="확인",
+                    command=save_inline,
+                    width=5
+                ).pack(side="right")
+
+            else:
+                # 일반 보기 모드
+                checked = tk.BooleanVar(value=todo["done"])
+
+                def toggle(item=todo, variable=checked):
+                    old_value = item["done"]
+                    item["done"] = variable.get()
+
+                    try:
+                        save_todos(todos, selected_date)
+                    except (OSError, csv.Error) as error:
+                        item["done"] = old_value
+                        variable.set(old_value)
+                        messagebox.showerror(
+                            "저장 오류", str(error), parent=win
+                        )
+
+                tk.Checkbutton(
+                    row,
+                    text=todo["title"],
+                    variable=checked,
+                    command=toggle,
+                    anchor="w"
+                ).pack(side="left", fill="x", expand=True)
+
+                def delete(item=todo):
+                    if not messagebox.askyesno(
+                        "삭제 확인",
+                        "이 할 일을 삭제할까요?",
+                        parent=win
+                    ):
+                        return
+
+                    todos.remove(item)
+
+                    try:
+                        save_todos(todos, selected_date)
+                        refresh_list()
+                    except (OSError, csv.Error) as error:
+                        todos.append(item)
+                        messagebox.showerror(
+                            "저장 오류", str(error), parent=win
+                        )
+                        refresh_list()
+
+                def start_edit(item=todo):
+                    editing_item[0] = item
+                    refresh_list()
+
+                # [삭제] 버튼 (우측 끝에 배치)
+                tk.Button(
+                    row,
+                    text="삭제",
+                    command=delete,
+                    width=5
+                ).pack(side="right")
+
+                # [수정] 버튼 ([삭제] 버튼 바로 왼쪽에 배치)
+                tk.Button(
+                    row,
+                    text="수정",
+                    command=start_edit,
+                    width=5
+                ).pack(side="right", padx=2)
 
     def add_todo(event=None):
         """새로운 할 일 추가"""
-
         title = entry.get().strip()
 
         if not title:
@@ -161,9 +230,7 @@ def show_daily_todo(parent, selected_date):
             )
             return
 
-        # 기존 CSV에서 ID 확인
         rows = []
-
         try:
             with open(TODO_CSV, newline="", encoding="utf-8-sig") as file:
                 rows = list(csv.DictReader(file))
@@ -189,7 +256,6 @@ def show_daily_todo(parent, selected_date):
             save_todos(todos, selected_date)
             entry.delete(0, "end")
             refresh_list()
-
         except (OSError, csv.Error) as error:
             todos.remove(new_todo)
             messagebox.showerror(
@@ -199,7 +265,8 @@ def show_daily_todo(parent, selected_date):
     tk.Button(
         input_frame,
         text="추가",
-        command=add_todo
+        command=add_todo,
+        width=8
     ).pack(side="right")
 
     entry.bind("<Return>", add_todo)
