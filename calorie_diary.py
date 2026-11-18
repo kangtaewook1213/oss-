@@ -218,6 +218,7 @@ def show_calorie_page(parent, selected_date, embedded=False):
                 edit_type.set("식단 (섭취)")
                 edit_name.set("")
                 edit_kcal.set("")
+                messagebox.showinfo("수정 완료", "기록이 수정되었습니다.", parent=win)
 
             if not edit:
                 messagebox.showinfo("저장 완료", "기록이 저장되었습니다.", parent=win)
@@ -233,6 +234,7 @@ def show_calorie_page(parent, selected_date, embedded=False):
                 edit_name.set("")
                 edit_kcal.set("")
                 refresh_all()
+                messagebox.showinfo("삭제 완료", "기록이 삭제되었습니다.", parent=win)
         except (ValueError, OSError) as error:
             messagebox.showerror("삭제 오류", str(error), parent=win)
 
