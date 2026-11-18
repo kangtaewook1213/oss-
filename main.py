@@ -101,9 +101,11 @@ class CalendarApp:
                     continue
                 d = date(self.year, self.month, day)
                 is_today = d == today
+                fg = "red" if c == 0 else "blue" if c == 6 else "black" # 요일에 따라 날짜 글자색 설정
                 tk.Button(
                     self.grid_frame, text=str(day), width=4, height=2,
                     bg="#cde7ff" if is_today else None,
+                    fg=fg, # 설정한 글자색을 날짜 버튼에 적용
                     command=lambda d=d: show_detail_page(self.root, d),
                 ).grid(row=r, column=c, padx=1, pady=1, sticky="nsew")
 
