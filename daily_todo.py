@@ -59,7 +59,7 @@ def show_daily_todo(parent, selected_date):
 
     win = tk.Toplevel(parent)
     win.title(f"{selected_date} 할 일")
-    win.geometry("380x420")
+    win.geometry("380x460")
 
     tk.Label(
         win,
@@ -71,6 +71,31 @@ def show_daily_todo(parent, selected_date):
     
     # 현재 인라인 수정 중인 항목을 저장하는 변수 (None이면 일반 모드)
     editing_item = [None]
+
+    # [신규 추가] 상단 전체 할 일 퍼센테이지 표시 영역
+    progress_frame = tk.Frame(win, bg="#f0f0f0", relief="groove", bd=1)
+    progress_frame.pack(fill="x", padx=15, pady=5)
+
+    progress_label = tk.Label(
+        progress_frame,
+        text="달성률: 0% (0/0)",
+        font=("맑은 고딕", 10),
+        bg="#f0f0f0",
+        anchor="w"
+    )
+    progress_label.pack(fill="x", padx=10, pady=6)
+
+    def update_progress():
+        """전체 대비 완료된 할 일 비율 계산 및 UI 갱신"""
+        total = len(todos)
+        if total == 0:
+            percent = 0
+            done_count = 0
+        else:
+            done_count = sum(1 for t in todos if t["done"])
+            percent = int((done_count / total) * 100)
+        
+        progress_label.config(text=f"달성률: {percent}% ({done_count}/{total} 완료)")
 
     # 할 일 목록 영역
     list_frame = tk.Frame(win)
@@ -87,6 +112,8 @@ def show_daily_todo(parent, selected_date):
         """할 일 목록 새로고침"""
         for widget in list_frame.winfo_children():
             widget.destroy()
+
+        update_progress()
 
         if not todos:
             tk.Label(
@@ -163,6 +190,7 @@ def show_daily_todo(parent, selected_date):
 
                     try:
                         save_todos(todos, selected_date)
+                        update_progress()
                     except (OSError, csv.Error) as error:
                         item["done"] = old_value
                         variable.set(old_value)
