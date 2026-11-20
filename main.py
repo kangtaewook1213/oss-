@@ -121,6 +121,12 @@ class CalendarApp:
         self.year, self.month = (self.year + 1, 1) if self.month == 12 else (self.year, self.month + 1)
         self.draw()
 
+    def go_today(self):
+        """'오늘' 버튼: 오늘이 속한 연·월로 이동한 뒤 달력을 다시 그린다."""
+        today = date.today()
+        self.year, self.month = today.year, today.month
+        self.draw()
+
 
 def main():
     ensure_data_files()   # data/ 폴더와 CSV(헤더 포함) 없으면 자동 생성
