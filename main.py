@@ -80,6 +80,9 @@ class CalendarApp:
         self.title_label.pack(side="left", padx=5)
         tk.Button(header, text="▶", width=3, command=self.next_month).pack(side="left")
 
+        self.today_button = tk.Button(header, text="오늘", width=5)
+        self.today_button.pack(side="left", padx=(10, 0))
+
         self.grid_frame = tk.Frame(root)
         self.grid_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
