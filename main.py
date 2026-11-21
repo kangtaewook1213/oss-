@@ -80,6 +80,9 @@ class CalendarApp:
         self.title_label.pack(side="left", padx=5)
         tk.Button(header, text="▶", width=3, command=self.next_month).pack(side="left")
 
+        self.today_button = tk.Button(header, text="오늘", width=5, command=self.go_today)
+        self.today_button.pack(side="left", padx=(10, 0))
+
         self.grid_frame = tk.Frame(root)
         self.grid_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
@@ -116,6 +119,12 @@ class CalendarApp:
 
     def next_month(self):
         self.year, self.month = (self.year + 1, 1) if self.month == 12 else (self.year, self.month + 1)
+        self.draw()
+
+    def go_today(self):
+        """'오늘' 버튼: 오늘이 속한 연·월로 이동한 뒤 달력을 다시 그린다."""
+        today = date.today()
+        self.year, self.month = today.year, today.month
         self.draw()
 
 
