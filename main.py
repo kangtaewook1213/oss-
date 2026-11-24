@@ -80,6 +80,9 @@ class CalendarApp:
         self.title_label.pack(side="left", padx=5)
         tk.Button(header, text="▶", width=3, command=self.next_month).pack(side="left")
 
+        self.today_button = tk.Button(header, text="오늘", width=5, command=self.go_today)
+        self.today_button.pack(side="left", padx=(10, 0))
+
         self.grid_frame = tk.Frame(root)
         self.grid_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
@@ -101,9 +104,11 @@ class CalendarApp:
                     continue
                 d = date(self.year, self.month, day)
                 is_today = d == today
+                fg = "red" if c == 0 else "blue" if c == 6 else "black" # 요일에 따라 날짜 글자색 설정
                 tk.Button(
                     self.grid_frame, text=str(day), width=4, height=2,
                     bg="#cde7ff" if is_today else None,
+                    fg=fg, # 설정한 글자색을 날짜 버튼에 적용
                     command=lambda d=d: show_detail_page(self.root, d),
                 ).grid(row=r, column=c, padx=1, pady=1, sticky="nsew")
 
@@ -116,6 +121,12 @@ class CalendarApp:
 
     def next_month(self):
         self.year, self.month = (self.year + 1, 1) if self.month == 12 else (self.year, self.month + 1)
+        self.draw()
+
+    def go_today(self):
+        """'오늘' 버튼: 오늘이 속한 연·월로 이동한 뒤 달력을 다시 그린다."""
+        today = date.today()
+        self.year, self.month = today.year, today.month
         self.draw()
 
 
