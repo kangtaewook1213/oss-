@@ -10,6 +10,7 @@ import tkinter as tk
 from datetime import date, datetime, timedelta
 from tkinter import ttk
 
+import ui
 from config import CALORIE_CSV, TODO_CSV
 
 # 한 주의 시작 요일: "MON" = 월~일, "SUN" = 일~토
@@ -236,8 +237,6 @@ def render_weekly_report(win, summary, on_close):
     tk.Button(win, text="닫기", width=12, command=on_close).pack(pady=12)
 
 
-
-
 def weekly_report_button(parent, get_selected_date):
     """주간 리포트 버튼을 만들어 반환한다 (배치는 호출한 쪽에서 pack/grid).
 
@@ -245,3 +244,82 @@ def weekly_report_button(parent, get_selected_date):
     """
     return tk.Button(parent, text="주간 리포트",
                      command=lambda: show_weekly_report(parent, get_selected_date()))
+
+
+# ---------------------------------------------------------------
+# 화면: main.App 안에서 그려진다. app.selected / app.select / app.reload /
+#       app.toast를 쓴다. (색, 글꼴, 공통 위젯은 ui.py)
+# ---------------------------------------------------------------
+def build_weekly(app, parent):
+    day = app.selected
+    summary = weekly_summary(load_calorie_records(), load_todo_records(), day)
+    cal, todo, daily = summary["calorie"], summary["todo"], summary["daily"]
+    ui.page_header(app, parent, "주간 리포트", "한 주의 칼로리와 할 일을 한눈에 돌아보세요.", step=7,
+                   week_range=get_week_range)
+
+    active = [d for d in daily if d["intake"] or d["burn"]]
+    average = round(cal["intake"] / len(active)) if active else 0
+    ui.tile_row(parent, [
+        dict(title="주간 섭취", value=f"{cal['intake']:,}", unit="kcal", color=ui.COLOR_INTAKE,
+             note=f"기록한 날 평균 {average:,} kcal"),
+        dict(title="주간 소모", value=f"{cal['burn']:,}", unit="kcal", color=ui.COLOR_BURN,
+             note=f"{sum(1 for d in daily if d['burn'])}일 운동"),
+        dict(title="순 칼로리", value=f"{cal['net']:+,}", unit="kcal", color=ui.COLOR_PRIMARY,
+             note="섭취 − 소모"),
+        dict(title="할 일 완료율", value=f"{todo['rate']}", unit="%", color=ui.COLOR_TODO,
+             note=f"{todo['total']}개 중 {todo['done']}개 완료"),
+    ]).pack(fill="x", pady=(0, 14))
+
+    main = ui.frame(parent)
+    main.pack(fill="both", expand=True)
+    side = ui.frame(main, width=ui.px(330))
+    side.pack(side="right", fill="y", padx=(14, 0))
+    side.pack_propagate(False)
+
+    outer, body = ui.card(main, "요일별 칼로리")
+    outer.pack(side="left", fill="both", expand=True)
+    if not active:
+        ui.empty_state(body, "이 주에는 칼로리 기록이 없습니다",
+                       "칼로리 화면에서 식단이나 운동을 기록해 보세요.").pack(expand=True)
+    else:
+        best = max(daily, key=lambda d: d["intake"])
+        insight = (f"가장 많이 섭취한 날은 {ui.WEEKDAYS[best['date'].weekday()]}요일"
+                   f"({best['intake']:,} kcal)입니다.")
+        ui.label(body, insight, "small").pack(anchor="w", pady=(0, 6))
+        labels = [f"{ui.WEEKDAYS[d['date'].weekday()]} {d['date'].day}" for d in daily]
+        today = date.today()
+        highlight = next((i for i, d in enumerate(daily) if d["date"] == today), None)
+        ui.BarChart(body, labels, [("섭취", ui.COLOR_INTAKE, [d["intake"] for d in daily]),
+                                   ("소모", ui.COLOR_BURN, [d["burn"] for d in daily])],
+                    highlight=highlight).pack(fill="both", expand=True)
+
+    outer, body = ui.card(side, "할 일")
+    outer.pack(fill="both", expand=True)
+    if not todo["total"]:
+        ui.empty_state(body, "이 주에 등록된 할 일이 없습니다").pack(expand=True)
+        return
+    top = ui.frame(body)
+    top.pack(fill="x")
+    ui.ring(top, todo["rate"], size=76, width=8, color=ui.COLOR_TODO).pack(side="left")
+    text = ui.frame(top)
+    text.pack(side="left", padx=14)
+    ui.label(text, f"{todo['done']} / {todo['total']} 완료", "title").pack(anchor="w")
+    left = len(todo["incomplete"])
+    ui.label(text, f"미완료 {left}개" if left else "모두 완료했어요!", "muted",
+             color=ui.COLOR_MUTED if left else ui.COLOR_TODO).pack(anchor="w")
+
+    ui.divider(body).pack(fill="x", pady=12)
+    ui.label(body, "미완료 할 일", "h2").pack(anchor="w", pady=(0, 6))
+    if not left:
+        ui.label(body, "남은 할 일이 없습니다.", "small").pack(anchor="w")
+        return
+    scroll = ui.ScrollFrame(body)
+    scroll.pack(fill="both", expand=True)
+    for item in sorted(todo["incomplete"], key=lambda t: t["date"]):
+        row = ui.frame(scroll.body)
+        row.pack(fill="x", pady=3)
+        tk.Label(row, text=f"{item['date'].month}/{item['date'].day}", font=ui.FONTS["small"],
+                 bg=ui.COLOR_TRACK, fg=ui.COLOR_MUTED, width=5).pack(side="left")
+        link = ui.label(row, item["title"], "body", anchor="w", cursor="hand2")
+        link.pack(side="left", fill="x", expand=True, padx=8)
+        link.bind("<Button-1>", lambda event, d=item["date"]: app.select(d, page="todo"))
