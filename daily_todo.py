@@ -237,7 +237,6 @@ def show_daily_todo(parent, selected_date):
                     width=5
                 ).pack(side="right")
 
-                # daily_todo의 수정 버튼
                 tk.Button(
                     row,
                     text="수정",
