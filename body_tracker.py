@@ -3,10 +3,13 @@ import math
 import os
 import tkinter as tk
 from datetime import date
-from tkinter import messagebox, ttk
 
+import ui
 from config import BODY_TRACKER_CSV, BODY_TRACKER_HEADER
 
+SAVE_ERRORS = (ValueError, OSError, csv.Error)
+BMI_SEGMENTS = [(18.5, ui.COLOR_BURN, "저체중"), (23, ui.COLOR_TODO, "정상"),
+                (25, ui.COLOR_INTAKE, "과체중"), (35, ui.COLOR_DANGER, "비만")]
 
 def read_body_records():
     """인바디 CSV를 읽어 리스트로 반환한다. 파일이 없으면 빈 리스트를 반환한다."""
@@ -92,7 +95,6 @@ def save_body_record(selected_date, height, weight, muscle, body_fat):
 
     return record
 
-
 def body_record_for_date(selected_date):
     """Issue #3/#4: 선택 날짜의 가장 최근 인바디 기록을 반환한다."""
     target = selected_date.isoformat()
@@ -114,196 +116,108 @@ def calculate_bmi(height_cm, weight_kg):
     return round(float(weight_kg) / (height_m ** 2), 1)
 
 
-def previous_body_record(selected_date):
-    """Issue #4: 선택 날짜보다 이전인 가장 가까운 인바디 기록을 반환한다."""
-    candidates = []
-
-    for record in read_body_records():
-        try:
-            record_date = date.fromisoformat(record["date"])
-        except ValueError:
-            continue
-
-        if record_date < selected_date:
-            candidates.append((record_date, record))
-
-    if not candidates:
-        return None
-
-    candidates.sort(key=lambda item: (item[0], item[1]["id"]))
-    return candidates[-1][1]
+# ---------------------------------------------------------------
+# 화면: main.App 안에서 그려진다. app.selected / app.select / app.reload /
+#       app.toast를 쓴다. (색, 글꼴, 공통 위젯은 ui.py)
+# ---------------------------------------------------------------
+def bmi_category(bmi):
+    for limit, _, name in BMI_SEGMENTS:
+        if bmi < limit:
+            return name
+    return BMI_SEGMENTS[-1][2]
 
 
-def calculate_change(current_value, previous_value):
-    """변화량과 변화율을 계산한다."""
-    diff = current_value - previous_value
-    rate = None if previous_value == 0 else diff / previous_value * 100
-    return diff, rate
+def build_body(app, parent):
+    day = app.selected
+    ui.page_header(app, parent, "인바디", f"{ui.format_day(day)}의 신체 수치를 기록하세요.", step=1)
 
+    latest = {}     # 날짜별 가장 최근 기록
+    for record in sorted(read_body_records(), key=lambda r: r["id"]):
+        latest[record["date"]] = record
+    history = [latest[key] for key in sorted(latest)]
+    current = latest.get(day.isoformat())
+    earlier = [r for r in history if r["date"] < day.isoformat()]
+    shown = current or (earlier[-1] if earlier else None)
+    previous = None
+    if shown:
+        before = [r for r in history if r["date"] < shown["date"]]
+        previous = before[-1] if before else None
 
-def show_body_tracker(parent, selected_date, embedded=False):
-    """Issue #2~#4를 한 창에서 제공한다."""
-    if embedded:
-        win = tk.Frame(parent, bg="#FFFFFF")
-        win.pack(fill="both", expand=True)
-    else:
-        win = tk.Toplevel(parent)
-        win.title(f"{selected_date.isoformat()} 건강 기록")
-        win.geometry("760x580")
-        win.minsize(700, 540)
+    def change(key, unit):
+        if not shown or not previous:
+            return "이전 기록 없음"
+        diff = shown[key] - previous[key]
+        if abs(diff) < 0.05:
+            return "이전 기록과 같음"
+        return f"이전보다 {'▲' if diff > 0 else '▼'} {abs(diff):.1f}{unit}"
 
-    notebook = ttk.Notebook(win)
-    notebook.pack(fill="both", expand=True, padx=10, pady=10)
+    def value(key):
+        return f"{shown[key]:g}" if shown else "–"
 
-    # 1. 입력/저장
-    input_frame = tk.Frame(notebook, padx=15, pady=15)
+    bmi = calculate_bmi(shown["height_cm"], shown["weight_kg"]) if shown else None
+    ui.tile_row(parent, [
+        dict(title="체중", value=value("weight_kg"), unit="kg", color=ui.COLOR_BODY,
+             note=change("weight_kg", "kg")),
+        dict(title="골격근량", value=value("skeletal_muscle_mass_kg"), unit="kg",
+             color=ui.COLOR_TODO, note=change("skeletal_muscle_mass_kg", "kg")),
+        dict(title="체지방률", value=value("body_fat_percentage"), unit="%",
+             color=ui.COLOR_INTAKE, note=change("body_fat_percentage", "%p")),
+        dict(title="BMI", value=f"{bmi}" if bmi else "–", color=ui.COLOR_PRIMARY,
+             note=bmi_category(bmi) if bmi else "기록 없음"),
+    ]).pack(fill="x", pady=(0, 14))
 
-    tk.Label(
-        input_frame,
-        text=f"{selected_date.isoformat()} 인바디 수치 입력",
-        font=("맑은 고딕", 13, "bold"),
-    ).grid(row=0, column=0, columnspan=2, pady=(0, 15))
+    main = ui.frame(parent)
+    main.pack(fill="both", expand=True)
+    form_outer, form = ui.card(main, "수치 입력")
+    form_outer.pack(side="left", fill="y")
+    right = ui.frame(main)
+    right.pack(side="left", fill="both", expand=True, padx=(14, 0))
 
-    fields = [
-        ("키(cm)", "height"),
-        ("체중(kg)", "weight"),
-        ("골격근량(kg)", "muscle"),
-        ("체지방률(%)", "fat"),
-    ]
-
-    entries = {}
-
-    for row, (label, key) in enumerate(fields, start=1):
-        tk.Label(input_frame, text=label).grid(row=row, column=0, sticky="e", padx=5, pady=5)
-        entry = tk.Entry(input_frame, width=24)
-        entry.grid(row=row, column=1, sticky="w")
-        entries[key] = entry
-
-    # 2. BMI/현재 수치
-    bmi_frame = tk.Frame(notebook, padx=20, pady=20)
-
-    bmi_label = tk.Label(bmi_frame, text="", font=("맑은 고딕", 12), justify="left")
-    bmi_label.pack(anchor="w", pady=10)
-
-    # 3. 이전 기록 비교
-    compare_frame = tk.Frame(notebook, padx=20, pady=20)
-
-    compare_label = tk.Label(compare_frame, text="", font=("맑은 고딕", 11), justify="left")
-    compare_label.pack(anchor="w", pady=10)
-
-    def refresh_bmi():
-        record = body_record_for_date(selected_date)
-
-        if record is None:
-            bmi_label.config(text="선택 날짜의 인바디 기록이 없습니다.")
-            return
-
-        bmi = calculate_bmi(record["height_cm"], record["weight_kg"])
-
-        bmi_label.config(
-            text=(
-                f"BMI: {bmi}\n"
-                f"키: {record['height_cm']:g} cm\n"
-                f"체중: {record['weight_kg']:g} kg\n"
-                f"골격근량: {record['skeletal_muscle_mass_kg']:g} kg\n"
-                f"체지방률: {record['body_fat_percentage']:g}%"
-            )
-        )
-
-    def make_change_line(label, current, previous, key, unit):
-        diff, rate = calculate_change(current[key], previous[key])
-        rate_text = "계산 불가" if rate is None else f"{rate:+.1f}%"
-
-        return (
-            f"{label}: "
-            f"{previous[key]:g}{unit} → {current[key]:g}{unit} "
-            f"(변화 {diff:+.1f}{unit}, {rate_text})"
-        )
-
-    def refresh_compare():
-        current = body_record_for_date(selected_date)
-        previous = previous_body_record(selected_date)
-
-        if current is None:
-            compare_label.config(text="현재 날짜의 인바디 기록이 없습니다.")
-            return
-
-        if previous is None:
-            compare_label.config(text="비교할 이전 인바디 기록이 없습니다.")
-            return
-
-        compare_label.config(
-            text=(
-                f"이전 기록: {previous['date']}\n"
-                f"현재 기록: {current['date']}\n\n"
-                + make_change_line("체중", current, previous, "weight_kg", " kg")
-                + "\n"
-                + make_change_line(
-                    "골격근량", current, previous, "skeletal_muscle_mass_kg", " kg"
-                )
-                + "\n"
-                + make_change_line("체지방률", current, previous, "body_fat_percentage", "%")
-            )
-        )
-
-    def refresh_all():
-        try:
-            refresh_bmi()
-            refresh_compare()
-        except (OSError, csv.Error, ValueError) as e:
-            messagebox.showerror("읽기 오류", str(e), parent=win)
-
-    def on_save():
-        try:
-            save_body_record(
-                selected_date,
-                entries["height"].get(),
-                entries["weight"].get(),
-                entries["muscle"].get(),
-                entries["fat"].get(),
-            )
-
-            refresh_all()
-
-            messagebox.showinfo("저장 완료", "인바디 기록을 저장했습니다.", parent=win)
-
-        except (ValueError, OSError, csv.Error) as e:
-            messagebox.showerror("입력 오류", str(e), parent=win)
-
-    tk.Button(input_frame, text="기록 저장", command=on_save).grid(
-        row=5, column=0, columnspan=2, pady=15
-    )
-
-    # 마지막 입력칸에서 Enter를 누르면 저장, 그 외에는 다음 칸으로 이동
-    order = [entries[key] for _, key in fields]
-    for index, entry in enumerate(order):
-        if index < len(order) - 1:
-            entry.bind("<Return>", lambda event, nxt=order[index + 1]: nxt.focus_set())
-        else:
-            entry.bind("<Return>", lambda event: on_save())
-
-    tk.Button(bmi_frame, text="현재 수치 확인", command=refresh_bmi).pack(anchor="w", pady=10)
-    tk.Button(compare_frame, text="이전 기록과 비교", command=refresh_compare).pack(
-        anchor="w", pady=10
-    )
-
-    notebook.add(input_frame, text="입력·저장")
-    notebook.add(bmi_frame, text="BMI·현재 수치")
-    notebook.add(compare_frame, text="이전 기록 비교")
-
-    # 탭을 옮길 때마다 최신 데이터로 갱신한다.
-    notebook.bind("<<NotebookTabChanged>>", lambda event: refresh_all())
-
-    current = body_record_for_date(selected_date)
     if current:
-        for key, field in (
-            ("height", "height_cm"),
-            ("weight", "weight_kg"),
-            ("muscle", "skeletal_muscle_mass_kg"),
-            ("fat", "body_fat_percentage"),
-        ):
-            entries[key].insert(0, f"{current[field]:g}")
+        note = "이 날짜에 저장된 기록이 있습니다. 다시 저장하면 새 값으로 바뀝니다."
+    elif shown:
+        note = f"이 날짜의 기록이 없어 {shown['date']} 기록을 보여주고 있습니다."
+    else:
+        note = "아직 인바디 기록이 없습니다."
+    ui.label(form, note, "small", wraplength=ui.px(250), justify="left").pack(anchor="w")
 
-    refresh_all()
+    fields = (("height_cm", "키 (cm)"), ("weight_kg", "체중 (kg)"),
+              ("skeletal_muscle_mass_kg", "골격근량 (kg)"), ("body_fat_percentage", "체지방률 (%)"))
+    inputs = {}
+    for key, text in fields:
+        ui.label(form, text, "small").pack(anchor="w", pady=(12, 4))
+        inputs[key] = tk.StringVar(master=form)
+        if current:
+            inputs[key].set(f"{current[key]:g}")
+        elif shown and key == "height_cm":
+            inputs[key].set(f"{shown[key]:g}")      # 키는 잘 변하지 않으므로 미리 채운다
+        box = ui.entry(form, inputs[key], width=30)
+        box.pack(fill="x", ipady=7)
+        box.bind("<Return>", lambda event: submit())
+        if key == ("weight_kg" if inputs["height_cm"].get() else "height_cm"):
+            app.autofocus(box, always=True)
 
-    return win
+    def submit():
+        try:
+            save_body_record(day, *(inputs[key].get() for key, _ in fields))
+        except SAVE_ERRORS as error:
+            app.toast(str(error), "error")
+            return
+        app.reload()
+        app.toast("인바디 기록을 저장했습니다.")
+
+    ui.button(form, "기록 저장", submit).pack(fill="x", pady=(18, 0))
+
+    outer, body = ui.card(right, "BMI")
+    outer.pack(fill="x", pady=(0, 14))
+    ui.ScaleBar(body, bmi, 15, BMI_SEGMENTS).pack(fill="x")
+
+    outer, body = ui.card(right, "체중 변화")
+    outer.pack(fill="both", expand=True)
+    points = [(f"{int(r['date'][5:7])}/{int(r['date'][8:10])}", r["weight_kg"])
+              for r in history[-10:]]
+    if len(points) < 2:
+        ui.empty_state(body, "기록이 2개 이상 쌓이면 변화 그래프가 나타납니다",
+                    "날짜를 바꿔 가며 수치를 저장해 보세요.").pack(expand=True)
+    else:
+        ui.LineChart(body, points, color=ui.COLOR_BODY, unit="kg").pack(fill="both", expand=True)
