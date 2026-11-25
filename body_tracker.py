@@ -11,6 +11,7 @@ SAVE_ERRORS = (ValueError, OSError, csv.Error)
 BMI_SEGMENTS = [(18.5, ui.COLOR_BURN, "저체중"), (23, ui.COLOR_TODO, "정상"),
                 (25, ui.COLOR_INTAKE, "과체중"), (35, ui.COLOR_DANGER, "비만")]
 
+
 def read_body_records():
     """인바디 CSV를 읽어 리스트로 반환한다. 파일이 없으면 빈 리스트를 반환한다."""
     if not os.path.exists(BODY_TRACKER_CSV):
@@ -95,6 +96,7 @@ def save_body_record(selected_date, height, weight, muscle, body_fat):
 
     return record
 
+
 def body_record_for_date(selected_date):
     """Issue #3/#4: 선택 날짜의 가장 최근 인바디 기록을 반환한다."""
     target = selected_date.isoformat()
@@ -114,6 +116,33 @@ def calculate_bmi(height_cm, weight_kg):
         raise ValueError("키는 0보다 커야 합니다.")
 
     return round(float(weight_kg) / (height_m ** 2), 1)
+
+
+def previous_body_record(selected_date):
+    """Issue #4: 선택 날짜보다 이전인 가장 가까운 인바디 기록을 반환한다."""
+    candidates = []
+
+    for record in read_body_records():
+        try:
+            record_date = date.fromisoformat(record["date"])
+        except ValueError:
+            continue
+
+        if record_date < selected_date:
+            candidates.append((record_date, record))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda item: (item[0], item[1]["id"]))
+    return candidates[-1][1]
+
+
+def calculate_change(current_value, previous_value):
+    """변화량과 변화율을 계산한다."""
+    diff = current_value - previous_value
+    rate = None if previous_value == 0 else diff / previous_value * 100
+    return diff, rate
 
 
 # ---------------------------------------------------------------
@@ -138,18 +167,18 @@ def build_body(app, parent):
     current = latest.get(day.isoformat())
     earlier = [r for r in history if r["date"] < day.isoformat()]
     shown = current or (earlier[-1] if earlier else None)
-    previous = None
-    if shown:
-        before = [r for r in history if r["date"] < shown["date"]]
-        previous = before[-1] if before else None
+    # 이전 기록 찾기와 변화량 계산은 기존 함수(previous_body_record, calculate_change)를 쓴다.
+    previous = (previous_body_record(date.fromisoformat(shown["date"]))
+                if shown else None)
 
     def change(key, unit):
         if not shown or not previous:
             return "이전 기록 없음"
-        diff = shown[key] - previous[key]
+        diff, rate = calculate_change(shown[key], previous[key])
         if abs(diff) < 0.05:
             return "이전 기록과 같음"
-        return f"이전보다 {'▲' if diff > 0 else '▼'} {abs(diff):.1f}{unit}"
+        rate_text = "" if rate is None else f" ({rate:+.1f}%)"
+        return f"이전보다 {'▲' if diff > 0 else '▼'} {abs(diff):.1f}{unit}{rate_text}"
 
     def value(key):
         return f"{shown[key]:g}" if shown else "–"
@@ -184,6 +213,7 @@ def build_body(app, parent):
     fields = (("height_cm", "키 (cm)"), ("weight_kg", "체중 (kg)"),
               ("skeletal_muscle_mass_kg", "골격근량 (kg)"), ("body_fat_percentage", "체지방률 (%)"))
     inputs = {}
+    boxes = []
     for key, text in fields:
         ui.label(form, text, "small").pack(anchor="w", pady=(12, 4))
         inputs[key] = tk.StringVar(master=form)
@@ -193,7 +223,7 @@ def build_body(app, parent):
             inputs[key].set(f"{shown[key]:g}")      # 키는 잘 변하지 않으므로 미리 채운다
         box = ui.entry(form, inputs[key], width=30)
         box.pack(fill="x", ipady=7)
-        box.bind("<Return>", lambda event: submit())
+        boxes.append(box)
         if key == ("weight_kg" if inputs["height_cm"].get() else "height_cm"):
             app.autofocus(box, always=True)
 
@@ -205,6 +235,13 @@ def build_body(app, parent):
             return
         app.reload()
         app.toast("인바디 기록을 저장했습니다.")
+
+    # 마지막 칸에서 Enter를 누르면 저장, 그 외에는 다음 칸으로 이동
+    for index, box in enumerate(boxes):
+        if index < len(boxes) - 1:
+            box.bind("<Return>", lambda event, nxt=boxes[index + 1]: nxt.focus_set())
+        else:
+            box.bind("<Return>", lambda event: submit())
 
     ui.button(form, "기록 저장", submit).pack(fill="x", pady=(18, 0))
 
@@ -218,6 +255,6 @@ def build_body(app, parent):
               for r in history[-10:]]
     if len(points) < 2:
         ui.empty_state(body, "기록이 2개 이상 쌓이면 변화 그래프가 나타납니다",
-                    "날짜를 바꿔 가며 수치를 저장해 보세요.").pack(expand=True)
+                       "날짜를 바꿔 가며 수치를 저장해 보세요.").pack(expand=True)
     else:
         ui.LineChart(body, points, color=ui.COLOR_BODY, unit="kg").pack(fill="both", expand=True)
