@@ -1,9 +1,13 @@
 """선택한 날짜의 할 일을 조회하고 추가·완료·삭제 및 수정한다."""
 import csv
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import messagebox
 
+import ui
 from config import TODO_CSV, TODO_HEADER
+
+SAVE_ERRORS = (ValueError, OSError, csv.Error)
 
 
 def load_todos(selected_date):
@@ -17,7 +21,7 @@ def load_todos(selected_date):
                     todos.append({
                         "id": row["id"],
                         "title": row["title"],
-                        "done": row["done"].lower() == "true"
+                        "done": row["done"].lower() == "true",
                     })
     except FileNotFoundError:
         pass
@@ -45,7 +49,7 @@ def save_todos(todos, selected_date):
             "id": todo["id"],
             "date": date_text,
             "title": todo["title"],
-            "done": str(todo["done"])
+            "done": str(todo["done"]),
         })
 
     with open(TODO_CSV, "w", newline="", encoding="utf-8-sig") as file:
@@ -54,252 +58,197 @@ def save_todos(todos, selected_date):
         writer.writerows(rows)
 
 
-def show_daily_todo(parent, selected_date):
-    """할 일 관리 화면"""
+def next_todo_id():
+    """todo.csv 전체에서 가장 큰 id 다음 번호"""
+    ids = []
+    try:
+        with open(TODO_CSV, newline="", encoding="utf-8-sig") as file:
+            for row in csv.DictReader(file):
+                try:
+                    ids.append(int(row["id"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+    except FileNotFoundError:
+        pass
+    return str(max(ids, default=0) + 1)
 
-    win = tk.Toplevel(parent)
-    win.title(f"{selected_date} 할 일")
-    win.geometry("380x460")
 
-    tk.Label(
-        win,
-        text=f"{selected_date.strftime('%Y년 %m월 %d일')} 할 일",
-        font=("맑은 고딕", 14, "bold")
-    ).pack(pady=15)
+def add_todo(app, day, todos, title):
+    title = title.strip()
+    if not title:
+        app.toast("할 일 내용을 입력해 주세요.", "error")
+        return
+    todos.append({"id": next_todo_id(), "title": title, "done": False})
+    try:
+        save_todos(todos, day)
+    except SAVE_ERRORS as error:
+        app.toast(f"저장하지 못했습니다: {error}", "error")
+    app.reload(refocus=True)
 
-    todos = load_todos(selected_date)
-    
-    # 현재 인라인 수정 중인 항목을 저장하는 변수 (None이면 일반 모드)
-    editing_item = [None]
 
-    # [신규 추가] 상단 전체 할 일 퍼센테이지 표시 영역
-    progress_frame = tk.Frame(win, bg="#f0f0f0", relief="groove", bd=1)
-    progress_frame.pack(fill="x", padx=15, pady=5)
+def toggle_todo(app, day, todos, item):
+    item["done"] = not item["done"]
+    try:
+        save_todos(todos, day)
+    except SAVE_ERRORS as error:
+        app.toast(f"저장하지 못했습니다: {error}", "error")
+    app.reload()
 
-    progress_label = tk.Label(
-        progress_frame,
-        text="달성률: 0% (0/0)",
-        font=("맑은 고딕", 10),
-        bg="#f0f0f0",
-        anchor="w"
+
+def start_edit_todo(app, item):
+    app.editing_todo_id = item["id"]
+    app.reload()
+
+
+def cancel_edit_todo(app):
+    app.editing_todo_id = None
+    app.reload()
+
+
+def save_edit_todo(app, day, todos, item, new_title):
+    cleaned = new_title.strip()
+    if not cleaned:
+        app.toast("할 일 내용을 입력해 주세요.", "error")
+        return
+    old_title = item["title"]
+    item["title"] = cleaned
+    try:
+        save_todos(todos, day)
+        app.editing_todo_id = None
+        app.toast("할 일을 수정했습니다.")
+    except SAVE_ERRORS as error:
+        item["title"] = old_title
+        app.toast(f"저장하지 못했습니다: {error}", "error")
+    app.reload()
+
+
+def delete_todo(app, day, todos, item):
+    if not messagebox.askyesno(
+        "삭제 확인", f"'{item['title']}'을(를) 삭제할까요?", parent=app.root
+    ):
+        return
+    if getattr(app, "editing_todo_id", None) == item["id"]:
+        app.editing_todo_id = None
+    todos.remove(item)
+    try:
+        save_todos(todos, day)
+        app.toast("할 일을 삭제했습니다.")
+    except SAVE_ERRORS as error:
+        app.toast(f"저장하지 못했습니다: {error}", "error")
+    app.reload()
+
+
+def todo_row(app, parent, day, todos, todo, compact=False):
+    """할 일 한 줄. 체크 상자나 글자를 누르면 완료 여부가 바뀐다."""
+    row = ui.frame(parent)
+    row.pack(fill="x", pady=(6, 0) if compact else 0, ipady=0 if compact else 7)
+
+    is_editing = (not compact) and (getattr(app, "editing_todo_id", None) == todo["id"])
+    if is_editing:
+        edit_var = tk.StringVar(master=row, value=todo["title"])
+        edit_box = ui.entry(row, edit_var)
+        edit_box.pack(side="left", fill="x", expand=True, padx=(4, 8), ipady=4)
+        edit_box.focus_set()
+        edit_box.bind(
+            "<Return>", lambda event: save_edit_todo(app, day, todos, todo, edit_var.get())
+        )
+        edit_box.bind("<Escape>", lambda event: cancel_edit_todo(app))
+        ui.button(
+            row, "취소", lambda: cancel_edit_todo(app), "soft", font=ui.FONTS["small"], padx=8, pady=2
+        ).pack(side="right")
+        ui.button(
+            row,
+            "저장",
+            lambda: save_edit_todo(app, day, todos, todo, edit_var.get()),
+            font=ui.FONTS["small"],
+            padx=8,
+            pady=2,
+        ).pack(side="right", padx=(0, 4))
+        return row
+
+    def toggle(event=None):
+        toggle_todo(app, day, todos, todo)
+
+    ui.check(row, todo["done"], toggle).pack(side="left", padx=(0 if compact else 4, 10))
+    font = tkfont.Font(family=ui.FONT_FAMILY, size=10, overstrike=todo["done"])
+    text = tk.Label(
+        row,
+        text=todo["title"],
+        font=font,
+        bg=row["bg"],
+        anchor="w",
+        cursor="hand2",
+        fg=ui.COLOR_FAINT if todo["done"] else ui.COLOR_TEXT,
     )
-    progress_label.pack(fill="x", padx=10, pady=6)
-
-    def update_progress():
-        """전체 대비 완료된 할 일 비율 계산 및 UI 갱신"""
-        total = len(todos)
-        if total == 0:
-            percent = 0
-            done_count = 0
-        else:
-            done_count = sum(1 for t in todos if t["done"])
-            percent = int((done_count / total) * 100)
-        
-        progress_label.config(text=f"달성률: {percent}% ({done_count}/{total} 완료)")
-
-    # 할 일 목록 영역
-    list_frame = tk.Frame(win)
-    list_frame.pack(fill="both", expand=True, padx=15)
-
-    # 하단 입력 영역 (신규 추가용)
-    input_frame = tk.Frame(win)
-    input_frame.pack(fill="x", padx=15, pady=12)
-
-    entry = tk.Entry(input_frame)
-    entry.pack(side="left", fill="x", expand=True, padx=5)
-
-    def refresh_list():
-        """할 일 목록 새로고침"""
-        for widget in list_frame.winfo_children():
-            widget.destroy()
-
-        update_progress()
-
-        if not todos:
-            tk.Label(
-                list_frame,
-                text="등록된 할 일이 없습니다.",
-                fg="gray"
-            ).pack(pady=15)
-            return
-
-        for todo in todos:
-            row = tk.Frame(list_frame)
-            row.pack(fill="x", pady=3)
-
-            # 만약 현재 항목이 수정 중인 상태라면 해당 위치에 바로 Entry 생성
-            if editing_item[0] == todo:
-                inline_entry = tk.Entry(row)
-                inline_entry.insert(0, todo["title"])
-                inline_entry.pack(side="left", fill="x", expand=True, padx=5)
-                inline_entry.focus_set()
-
-                def save_inline(item=todo, ent=inline_entry):
-                    new_title = ent.get().strip()
-                    if not new_title:
-                        messagebox.showwarning(
-                            "입력 확인",
-                            "할 일 내용을 입력해 주세요.",
-                            parent=win
-                        )
-                        return
-
-                    old_title = item["title"]
-                    item["title"] = new_title
-
-                    try:
-                        save_todos(todos, selected_date)
-                        editing_item[0] = None
-                        refresh_list()
-                    except (OSError, csv.Error) as error:
-                        item["title"] = old_title
-                        messagebox.showerror(
-                            "저장 오류", str(error), parent=win
-                        )
-                        refresh_list()
-
-                inline_entry.bind("<Return>", lambda e: save_inline())
-
-                def cancel_edit():
-                    editing_item[0] = None
-                    refresh_list()
-
-                # [취소] 버튼
-                tk.Button(
-                    row,
-                    text="취소",
-                    command=cancel_edit,
-                    width=5
-                ).pack(side="right", padx=2)
-
-                # [확인] 버튼
-                tk.Button(
-                    row,
-                    text="확인",
-                    command=save_inline,
-                    width=5
-                ).pack(side="right")
-
-            else:
-                # 일반 보기 모드
-                checked = tk.BooleanVar(value=todo["done"])
-
-                def toggle(item=todo, variable=checked):
-                    old_value = item["done"]
-                    item["done"] = variable.get()
-
-                    try:
-                        save_todos(todos, selected_date)
-                        update_progress()
-                    except (OSError, csv.Error) as error:
-                        item["done"] = old_value
-                        variable.set(old_value)
-                        messagebox.showerror(
-                            "저장 오류", str(error), parent=win
-                        )
-
-                tk.Checkbutton(
-                    row,
-                    text=todo["title"],
-                    variable=checked,
-                    command=toggle,
-                    anchor="w"
-                ).pack(side="left", fill="x", expand=True)
-
-                def delete(item=todo):
-                    if not messagebox.askyesno(
-                        "삭제 확인",
-                        "이 할 일을 삭제할까요?",
-                        parent=win
-                    ):
-                        return
-
-                    todos.remove(item)
-
-                    try:
-                        save_todos(todos, selected_date)
-                        refresh_list()
-                    except (OSError, csv.Error) as error:
-                        todos.append(item)
-                        messagebox.showerror(
-                            "저장 오류", str(error), parent=win
-                        )
-                        refresh_list()
-
-                def start_edit(item=todo):
-                    editing_item[0] = item
-                    refresh_list()
-
-                tk.Button(
-                    row,
-                    text="삭제",
-                    command=delete,
-                    width=5
-                ).pack(side="right")
-
-                tk.Button(
-                    row,
-                    text="수정",
-                    command=start_edit,
-                    width=5
-                ).pack(side="right", padx=2)
+    text.pack(side="left", fill="x", expand=True)
+    text.bind("<Button-1>", toggle)
+    if not compact:
+        ui.button(
+            row,
+            "삭제",
+            lambda: delete_todo(app, day, todos, todo),
+            "danger",
+            font=ui.FONTS["small"],
+            padx=8,
+            pady=2,
+        ).pack(side="right", padx=4)
+        ui.button(
+            row,
+            "수정",
+            lambda: start_edit_todo(app, todo),
+            "soft",
+            font=ui.FONTS["small"],
+            padx=8,
+            pady=2,
+        ).pack(side="right")
+    return row
 
 
+def build_todo(app, parent):
+    day = app.selected
+    todos = load_todos(day)
+    done = sum(1 for todo in todos if todo["done"])
+    rate = round(done / len(todos) * 100) if todos else 0
+    ui.page_header(app, parent, "할 일", f"{ui.format_day(day)}에 할 일을 정리하세요.", step=1)
 
-    def add_todo(event=None):
-        """새로운 할 일 추가"""
-        title = entry.get().strip()
+    outer, body = ui.card(parent)
+    outer.pack(fill="x", pady=(0, 14))
+    ui.ring(body, rate, size=72, width=8, color=ui.COLOR_TODO).pack(side="left")
+    text = ui.frame(body)
+    text.pack(side="left", padx=16)
+    ui.label(
+        text, f"{len(todos)}개 중 {done}개 완료" if todos else "아직 할 일이 없어요", "title"
+    ).pack(anchor="w")
+    remaining = len(todos) - done
+    if not todos:
+        hint = "오른쪽에 할 일을 적고 Enter를 눌러 추가하세요."
+    elif remaining:
+        hint = f"{remaining}개 남았습니다. 하나씩 끝내 봐요."
+    else:
+        hint = "오늘 할 일을 모두 끝냈습니다!"
+    ui.label(text, hint, "muted").pack(anchor="w")
 
-        if not title:
-            messagebox.showwarning(
-                "입력 확인",
-                "할 일 내용을 입력해 주세요.",
-                parent=win
-            )
-            return
+    add = ui.frame(body)
+    add.pack(side="right")
+    title = tk.StringVar(master=body)
+    box = ui.entry(add, title, width=34)
+    box.pack(side="left", ipady=7)
+    box.bind("<Return>", lambda event: add_todo(app, day, todos, title.get()))
+    ui.button(add, "+ 추가", lambda: add_todo(app, day, todos, title.get())).pack(
+        side="left", padx=(8, 0)
+    )
+    app.autofocus(box, always=True)
 
-        rows = []
-        try:
-            with open(TODO_CSV, newline="", encoding="utf-8-sig") as file:
-                rows = list(csv.DictReader(file))
-        except FileNotFoundError:
-            pass
-
-        ids = []
-        for row in rows:
-            try:
-                ids.append(int(row["id"]))
-            except (ValueError, KeyError, TypeError):
-                continue
-
-        new_todo = {
-            "id": str(max(ids, default=0) + 1),
-            "title": title,
-            "done": False
-        }
-
-        todos.append(new_todo)
-
-        try:
-            save_todos(todos, selected_date)
-            entry.delete(0, "end")
-            refresh_list()
-        except (OSError, csv.Error) as error:
-            todos.remove(new_todo)
-            messagebox.showerror(
-                "저장 오류", str(error), parent=win
-            )
-
-    tk.Button(
-        input_frame,
-        text="추가",
-        command=add_todo,
-        width=8
-    ).pack(side="right")
-
-    entry.bind("<Return>", add_todo)
-
-    refresh_list()
-    entry.focus_set()
-
-    return win
+    outer, body = ui.card(parent, "할 일 목록")
+    outer.pack(fill="both", expand=True)
+    if not todos:
+        ui.empty_state(
+            body, "등록된 할 일이 없습니다", "위 입력란에 내용을 적고 추가해 보세요."
+        ).pack(expand=True)
+        return
+    scroll = ui.ScrollFrame(body)
+    scroll.pack(fill="both", expand=True)
+    for index, todo in enumerate(sorted(todos, key=lambda item: item["done"])):
+        if index:
+            ui.divider(scroll.body).pack(fill="x")
+        todo_row(app, scroll.body, day, todos, todo)
