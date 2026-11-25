@@ -155,6 +155,7 @@ def show_calorie_page(parent, selected_date, embedded=False):
     edit_area = tk.Frame(manage_page)
     edit_area.pack(side="bottom", fill="x")
     edit_type, edit_name, edit_kcal = make_input_form(edit_area)
+
     buttons = tk.Frame(edit_area)
     buttons.pack(pady=8)
     table_area = tk.Frame(manage_page)
@@ -210,7 +211,15 @@ def show_calorie_page(parent, selected_date, embedded=False):
                                     add_name.get(), add_kcal.get())
                 add_name.set("")
                 add_kcal.set("")
+
             refresh_all()
+
+            if edit:
+                edit_type.set("식단 (섭취)")
+                edit_name.set("")
+                edit_kcal.set("")
+                messagebox.showinfo("수정 완료", "기록이 수정되었습니다.", parent=win)
+
             if not edit:
                 messagebox.showinfo("저장 완료", "기록이 저장되었습니다.", parent=win)
         except (ValueError, OSError) as error:
@@ -221,9 +230,11 @@ def show_calorie_page(parent, selected_date, embedded=False):
             record_id = int(selected_values()[0])
             if messagebox.askyesno("삭제 확인", "선택한 기록을 삭제할까요?", parent=win):
                 delete_calorie_record(record_id)
+                edit_type.set("식단 (섭취)")
                 edit_name.set("")
                 edit_kcal.set("")
                 refresh_all()
+                messagebox.showinfo("삭제 완료", "기록이 삭제되었습니다.", parent=win)
         except (ValueError, OSError) as error:
             messagebox.showerror("삭제 오류", str(error), parent=win)
 
@@ -233,6 +244,6 @@ def show_calorie_page(parent, selected_date, embedded=False):
                          ("삭제", on_delete)):
         tk.Button(buttons, text=text, command=action).pack(side="left", padx=4)
     tk.Button(daily_page, text="다시 계산", command=refresh_all).pack(anchor="w", padx=20)
-    style_widgets(win)
+
     refresh_all()
     return win
