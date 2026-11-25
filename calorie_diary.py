@@ -120,7 +120,7 @@ def build_calorie(app, parent):
     day = app.selected
     records = records_for_date(day)
     totals = calorie_totals(records)
-    ui.page_header(app, parent, "칼로리", f"{ui.format_day(day)}의 식단과 운동을 기록하세요.", step=1)
+    ui.page_header(app, parent, "칼로리", f"{ui.format_day(day)}의 식단과 운동 기록을 추가하고 관리하세요.", step=1)
 
     ui.tile_row(parent, [
         dict(title="섭취", value=f"{totals['intake']:,}", unit="kcal", color=ui.COLOR_INTAKE,
