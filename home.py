@@ -359,10 +359,39 @@ def toggle_todo(app, day, todos, item):
     app.reload()
 
 
+def start_edit_todo(app, item):
+    app.editing_todo_id = item["id"]
+    app.reload()
+
+
+def cancel_edit_todo(app):
+    app.editing_todo_id = None
+    app.reload()
+
+
+def save_edit_todo(app, day, todos, item, new_title):
+    cleaned = new_title.strip()
+    if not cleaned:
+        app.toast("할 일 내용을 입력해 주세요.", "error")
+        return
+    old_title = item["title"]
+    item["title"] = cleaned
+    try:
+        daily_todo.save_todos(todos, day)
+        app.editing_todo_id = None
+        app.toast("할 일을 수정했습니다.")
+    except SAVE_ERRORS as error:
+        item["title"] = old_title
+        app.toast(f"저장하지 못했습니다: {error}", "error")
+    app.reload()
+
+
 def delete_todo(app, day, todos, item):
     if not messagebox.askyesno("삭제 확인", f"'{item['title']}'을(를) 삭제할까요?",
                                parent=app.root):
         return
+    if getattr(app, "editing_todo_id", None) == item["id"]:
+        app.editing_todo_id = None
     todos.remove(item)
     try:
         daily_todo.save_todos(todos, day)
@@ -377,6 +406,20 @@ def todo_row(app, parent, day, todos, todo, compact=False):
     row = ui.frame(parent)
     row.pack(fill="x", pady=(6, 0) if compact else 0, ipady=0 if compact else 7)
 
+    is_editing = (not compact) and (getattr(app, "editing_todo_id", None) == todo["id"])
+    if is_editing:
+        edit_var = tk.StringVar(master=row, value=todo["title"])
+        edit_box = ui.entry(row, edit_var)
+        edit_box.pack(side="left", fill="x", expand=True, padx=(4, 8), ipady=4)
+        edit_box.focus_set()
+        edit_box.bind("<Return>", lambda event: save_edit_todo(app, day, todos, todo, edit_var.get()))
+        edit_box.bind("<Escape>", lambda event: cancel_edit_todo(app))
+        ui.button(row, "취소", lambda: cancel_edit_todo(app), "soft",
+                  font=ui.FONTS["small"], padx=8, pady=2).pack(side="right")
+        ui.button(row, "저장", lambda: save_edit_todo(app, day, todos, todo, edit_var.get()),
+                  font=ui.FONTS["small"], padx=8, pady=2).pack(side="right", padx=(0, 4))
+        return row
+
     def toggle(event=None):
         toggle_todo(app, day, todos, todo)
 
@@ -389,6 +432,8 @@ def todo_row(app, parent, day, todos, todo, compact=False):
     if not compact:
         ui.button(row, "삭제", lambda: delete_todo(app, day, todos, todo), "danger",
                   font=ui.FONTS["small"], padx=8, pady=2).pack(side="right", padx=4)
+        ui.button(row, "수정", lambda: start_edit_todo(app, todo), "soft",
+                  font=ui.FONTS["small"], padx=8, pady=2).pack(side="right")
     return row
 
 
@@ -437,7 +482,6 @@ def build_todo(app, parent):
         if index:
             ui.divider(scroll.body).pack(fill="x")
         todo_row(app, scroll.body, day, todos, todo)
-
 
 # ---------------------------------------------------------------
 # 칼로리 화면 (2단계에서 calorie_diary.py로 옮김)
